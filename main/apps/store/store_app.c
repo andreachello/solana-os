@@ -20,6 +20,7 @@
 #include "core/os_cloud.h"
 #include "core/os_data.h"
 #include "core/ui.h"
+#include "core/ui_stream.h"
 #include "game/quests.h"
 #include "lua/lua_host.h"
 #include "lua/lua_install.h"
@@ -96,6 +97,7 @@ static void req_cancel(int kind)
 }
 
 static lv_obj_t *s_root, *s_cat_l, *s_sort_l, *s_hint, *s_offline, *s_detail_box, *s_action;
+static lv_obj_t *s_pills;            // the Streaming theme's category pills, else NULL
 static ui_list_t *s_list;
 static ui_kb_t *s_kb;
 static entry_t *s_entries;
@@ -270,6 +272,17 @@ static void row(int i, ui_row_t *r, void *ctx)
     }
     const entry_t *e = &s_entries[i - c];
     snprintf(r->title, sizeof(r->title), "%s  %s", e->symbol, e->name);
+    if (ui_stream()) {
+        // Streaming: the icon on a thumbnail, its colour picked by the app's id.
+        static const uint32_t tints[] = {0x3A2FC0, 0x0E6B45, 0xB8324E, 0xB8742A, 0x1C8BA8, 0x7A1A60, 0x4C8CFF, 0x6E6A0E};
+        unsigned h = 0;
+        for (const char *p = e->id; *p; p++) {
+            h = h * 31 + (unsigned char)*p;
+        }
+        strlcpy(r->title, e->name, sizeof(r->title));
+        r->thumb = tints[h % (sizeof(tints) / sizeof(tints[0]))];
+        r->thumb_symbol = e->symbol;
+    }
     strlcpy(r->sub, e->summary, sizeof(r->sub));
     const char *have = installed_version(e->id);
     if (have) {
@@ -290,6 +303,17 @@ static void render_head(void)
         strlcpy(t, "Updates", sizeof(t));
     } else {
         snprintf(t, sizeof(t), LV_SYMBOL_LEFT " %s " LV_SYMBOL_RIGHT, s_cat_names[s_cat]);
+    }
+    if (s_pills) {
+        // Streaming: every category as a pill, the current one filled.
+        lv_obj_clean(s_pills);
+        for (int i = 0; i < CAT_COUNT && !s_updates_only; i++) {
+            ui_stream_pill(s_pills, s_cat_names[i], i == s_cat, 0);
+        }
+        if (s_updates_only) {
+            ui_stream_pill(s_pills, "Updates", true, 0);
+        }
+        return;
     }
     lv_label_set_text(s_cat_l, t);
     lv_label_set_text(s_sort_l, s_updates_only ? "" : s_sort_names[s_sort]);
@@ -537,7 +561,7 @@ static void show_detail(void)
     lv_obj_set_size(bar, OS_ROOT_W, 22);
     lv_obj_align(bar, LV_ALIGN_BOTTOM_LEFT, 0, -UI_HINT_H);
     lv_obj_set_style_border_side(bar, LV_BORDER_SIDE_TOP, 0);
-    lv_obj_set_style_border_width(bar, 1, 0);
+    lv_obj_set_style_border_width(bar, ui_border_w(), 0);
     lv_obj_set_style_border_color(bar, ui_col(COL_BORDER), 0);
     s_action = ui_label(bar, &sol_font_14, COL_GREEN, "");
     lv_obj_align(s_action, LV_ALIGN_LEFT_MID, 10, 1);
@@ -786,12 +810,24 @@ static void enter(lv_obj_t *root)
     lv_obj_remove_style_all(head);
     lv_obj_set_size(head, OS_ROOT_W, HEAD_H);
     lv_obj_set_style_border_side(head, LV_BORDER_SIDE_BOTTOM, 0);
-    lv_obj_set_style_border_width(head, 1, 0);
+    lv_obj_set_style_border_width(head, ui_border_w(), 0);
     lv_obj_set_style_border_color(head, ui_col(COL_BORDER), 0);
     s_cat_l = ui_label(head, &sol_font_14, COL_BLUE, "");
     lv_obj_align(s_cat_l, LV_ALIGN_LEFT_MID, 8, 0);
     s_sort_l = ui_label(head, &sol_mono_12, COL_DIM, "");
     lv_obj_align(s_sort_l, LV_ALIGN_RIGHT_MID, -8, 0);
+    s_pills = NULL;
+    if (ui_stream()) {
+        lv_obj_set_style_border_width(head, 0, 0);
+        s_pills = lv_obj_create(head);
+        lv_obj_remove_style_all(s_pills);
+        lv_obj_set_size(s_pills, OS_ROOT_W - 16, HEAD_H);
+        lv_obj_set_pos(s_pills, 10, 0);
+        lv_obj_set_flex_flow(s_pills, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(s_pills, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_column(s_pills, 4, 0);
+        lv_obj_set_scrollable(s_pills, false);
+    }
     s_list = ui_list_create(root, HEAD_H, BROWSE_H, row, NULL);
     s_hint = ui_hint(root, "");
     s_offline = ui_offline_create(root, 0, OS_ROOT_H - UI_HINT_H, true);

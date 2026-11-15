@@ -1,0 +1,11 @@
+{
+  "id": "themes",
+  "name": "Themes",
+  "version": "1.0.0",
+  "author": "@you",
+  "summary": "Pick how Solana OS looks: preview a theme, press SELECT to switch.",
+  "icon": "eye",
+  "accent": "EB54BC",
+  "category": "tools",
+  "permissions": []
+}

@@ -88,4 +88,8 @@ The firmware itself builds standalone.
 MIT (see `LICENSE`), except the fonts and logos in `main/assets/`, which the
 MIT license doesn't cover: the fonts are rendered from ABC Diatype and ABC
 Diatype Semi-Mono, and the logos are Solana Foundation brand assets. Both stay
-subject to their owners' terms; don't reuse them outside this firmware.
+subject to their owners' terms; don't reuse them outside this firmware. The
+`pearl_*` fonts there (the pearl themes' home screen) are rendered from Geist
+and Geist Mono, under the SIL Open Font License 1.1
+(`main/assets/GEIST-LICENSE.txt`). The `stream_*` fonts (the Streaming theme) are rendered
+from Bebas Neue, under the same license (`main/assets/BEBAS-NEUE-LICENSE.txt`).

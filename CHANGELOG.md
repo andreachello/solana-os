@@ -6,6 +6,52 @@ update only to a newer one. Dates are commit dates. The contracts these builds
 implement (`docs/LUA_API.md`, `docs/MESH.md`, `server/API.md`) and the server and
 site changes that came with them live in the parent repository.
 
+## Custom firmware: themes (on top of 2.2.0)
+
+- **Themes.** A theme is one entry in a table (`core/ui_theme.c`, `ui_theme_t`): a
+  colour for every `COL_*`, the focus colours, corner radius, border width, a hard
+  shadow, how the selected row is shown (bar, fill, ring or cursor), the status bar's
+  edge, an optional full-screen wallpaper and the home screen's layout. `ui_col()` and
+  `ui_light()` keep their meaning and now read the active theme, so every app follows
+  it; `ui_panel`, `ui_hint`, `ui_tabs`, the list, the keyboard, the offline panel, the
+  toast and the confirm dialog take its shape too, and apps that drew their own
+  corners, borders, gradients and selected states use the new `ui_radius()`,
+  `ui_border_w()`, `ui_focus_bg()`/`ui_focus_fg()`, `ui_accent()`, `ui_grad_a()`/`ui_grad_b()`,
+  `ui_card()`, `ui_surface()` and `ui_scrim()` (`core/ui.h`). Thirteen themes: Classic
+  Dark and Classic Light (ids 0 and 1, the Dark and Light every badge has saved, drawn
+  as before), Pearl, Black pearl, Icon grid, Grouped list, Dial, Control tiles,
+  Terminal, E-paper, Bold blocks, Monster RPG and Streaming. The choice is still the
+  `theme` setting, now a theme's id; an id no theme has falls back to Classic Dark.
+- **Home layouts.** `core/launcher.c` keeps the list of apps, the selection and what a
+  tile can say about its app (`home_info()`: the owner, badge ID and !LAMPs, the Wi-Fi
+  network and state, the mesh channel, the OS version; refreshed once a second from
+  state the OS already holds). The theme's layout in `core/home/` draws it: the 3x2
+  grid (`home_grid.c`, the classic launcher moved), bento tiles (`home_bento.c`), the
+  pearl cards with their artwork (`home_pearl.c`), rows (`home_list.c`), icons and a
+  dock (`home_icons.c`), a dial (`home_dial.c`), an RPG menu (`home_rpg.c`) and the
+  Streaming home (`home_stream.c`, with `core/ui_stream.c` for that theme's own
+  screens in the built-in apps).
+- **Picking a theme.** Settings > Theme opens the picker (`apps/themes`, a hidden
+  system app): the list of themes beside a preview of the highlighted one drawn from
+  its own tokens. Lua apps get `theme.list()`, `theme.get()` and `theme.set(id)`
+  (`lua/lua_sys.c`, always allowed; `docs/LUA_API.md`), so the picker can also be a
+  store app: `docs/examples/themes/`. `theme.set` closes the app and shows the home
+  screen in the new theme. Console: `theme` lists them, `theme <id>` switches
+  (`os_theme_set()`).
+- **Assets.** Three 320x240 RGB565 wallpapers rendered and dithered by
+  `tools/gen_wallpaper.py` (154 KB of flash each), the pearl cards' artwork, and two
+  open-licensed faces for the themes that need their design's own type: Geist (Pearl,
+  Black pearl) and Bebas Neue (Streaming), both SIL OFL 1.1, license texts in
+  `main/assets/`. `tools/img2lvgl565.py` writes opaque RGB565 images.
+- The image is 3,269,184 bytes (2.1.0: 2,306,659) of the 4 MB slot. Free heap at the
+  launcher on a badge in Classic Dark: about 150 KB (`heap`), as before.
+- Tested in the emulator: the home screen of every theme, the picker, the Lua Themes
+  app switching themes, Settings and My Badge in Black pearl. On a badge: boots,
+  `theme` lists the themes, heap as above. Not verified: most apps in most themes
+  beyond their home screens; redraw speed over a wallpaper on a badge; in Streaming,
+  My Badge's claimed view, Guide's category grid, Trade's filter and the App Store
+  rows (compiled, never seen running: they need a claimed badge online).
+
 ## 2.2.0 (unreleased)
 
 Only the move to ESP-IDF master; nothing else changes from 2.1.0.
