@@ -1,0 +1,74 @@
+Assets for the non-Streaming themes, rendered or generated from the canvas
+boards. Copy what you use into main/assets, add it to sources.cmake and
+assets.h. Everything here is in the same formats as the existing assets.
+
+LINE ICONS  emulator/local/icons/img_line_<id>.c   24x24, LV_COLOR_FORMAT_A8
+  Alpha only: set lv_obj_set_style_image_recolor(img, colour, 0) and
+  image_recolor_opa LV_OPA_COVER. Scale with lv_image_set_scale for 12/16/22 px.
+  app id     symbol               board drawing
+  badge      img_line_badge       ID card
+  wifi       img_line_wifi        Wi-Fi arcs
+  quests     img_line_quests      map pin
+  xdex       img_line_xdex        two overlapped squares
+  guide      img_line_guide       document
+  trade      img_line_trade       two arrows
+  store      img_line_store       download arrow
+  apps       img_line_apps        2x2 rounded squares
+  settings   img_line_settings    sliders
+  espnow     img_line_espnow      mesh nodes
+  debug      img_line_debug       chip
+  (any other: Lua apps, themes, beacon, about)  img_line_app   rounded square with a play mark
+  About on the boards is the Solana mark: use img_logomark_16/40.
+
+ART  emulator/local/art2/
+  img_wall_aurora.c   320x240 RGB565, dithered: the Icon grid / Control tiles wallpaper
+                      re-rendered from the board (blue top-left, magenta right, ORANGE glow at the bottom).
+                      Same symbol as the existing one: replace main/assets/img_wall_aurora.c.
+  img_list_orb.c      34x34 RGB565A8: Grouped list's pearl orb (profile card, at 22,11 in app-root coords).
+  img_rpg_gem.c       40x40 RGB565A8: Monster RPG's gem with its ground shadow (box at 76,110 in app-root coords).
+  RPG's sky, grass and checker strip are flat colours: sky #BFE8F5 to root y=88, grass #9ED8A8 below,
+  strip 0,82,320,6 alternating #86C98E / #9ED8A8 every 6 px. Draw them with objects; no image needed.
+
+FONTS  emulator/local/fonts2/   lv_font_conv 1.5.3, 4 bpp, as tools/gen_assets.sh. All SIL OFL 1.1
+  (LICENSE-<family>.txt beside them: keep each with its fonts and name it in the README).
+  "ASCII" = 0x20-0x7E plus the middle dot 0xB7; "digits" = space + , - . / 0-9. No LVGL symbol fallback:
+  put LV_SYMBOL_* in a separate label in a Montserrat face.
+
+  Terminal (JetBrains Mono)
+    term_mono_11        Regular 11, ASCII    every line of the screen
+    term_mono_bold_11   Bold 11, ASCII       the header's "solana-os 2.1.0" and the selected row
+    term_mono_9         Regular 9, ASCII     the bracketed hint line
+  Bold blocks (Archivo, Space Mono)
+    blocks_font_13      Archivo Black 13, ASCII   "SOLANA OS", "MY BADGE" (12 on the board), small tile labels
+    blocks_font_15      Archivo Black 15, ASCII   "Wi-Fi", "App Store"
+    blocks_num_41       Archivo Black 41, digits  the !LAMPs figure
+    blocks_text_12      Archivo Bold 12, ASCII    the handle
+    blocks_mono_9       Space Mono Bold 9, ASCII  pills, sticker, tags, "!LAMPs" (10 on the board), footer
+  Monster RPG (Silkscreen; it has capitals only, lower case prints as capitals)
+    rpg_font_9          Regular 9, ASCII     labels, the dialog's hint (8 on the board)
+    rpg_bold_10         Bold 10, ASCII       card header, values, menu entries, the dialog line
+    rpg_num_26          Regular 26, digits   the !LAMPs figure
+  E-paper (Newsreader, IBM Plex Mono)
+    paper_font_16       Newsreader Medium 16, ASCII         masthead "Solana OS" (15 on the board), list names
+    paper_italic_17     Newsreader Medium Italic 17, ASCII  the handle
+    paper_num_46        Newsreader Medium 46, digits        the !LAMPs figure
+    paper_mono_9        IBM Plex Mono Medium 9, ASCII       caps labels, right-hand fields, footer
+    paper_mono_11       IBM Plex Mono Medium 11, ASCII      the badge ID
+  Icon grid, Grouped list, Dial, Control tiles (Geist; pearl_font_11, pearl_font_13, pearl_mono_9,
+  pearl_num_46 and stream_bold_11 already in main/assets are Geist too)
+    apple_font_10       Medium 10, ASCII     icon labels, small secondary lines
+    apple_font_12       Medium 12, ASCII     tile labels, Dial's card lines, Grouped list's state
+    apple_font_14       SemiBold 14, ASCII   Grouped list's "@handle"
+    apple_num_26        SemiBold 26, digits  Control tiles' balance
+    apple_num_48        SemiBold 48, digits  Dial's balance
+
+STATUS BAR  core/os.h (in the tree now)
+  ui_theme_t.bar = UI_BAR_SLIM   boards 5, 6, 7: no logo, no percentage; stream_bold_11 title at x=14,
+                                 Wi-Fi glyph at x=266, a 19x10 battery outline at x=284 that fills with the charge.
+  void os_status_title(const char *text, uint32_t color);   the title's text and colour (a COL_*, 0 = text)
+                                 until the next app is entered: Dial names the focused item there.
+  void os_status_bare(bool on);  boards 8-12 (no system bar): hides the logo, title, Wi-Fi and battery so the
+                                 layout draws its own header as children of os_status_bar(). Call it in enter().
+                                 The OS shows them again by itself when any app is entered; the layout only
+                                 deletes what it added to the bar (on its own box's LV_EVENT_DELETE, as
+                                 core/home/home_stream.c does).

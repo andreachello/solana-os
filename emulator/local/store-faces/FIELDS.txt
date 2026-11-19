@@ -1,0 +1,122 @@
+Backgrounds for the Themes store app (1.1.2). Each <name>.png is 320x218, the area a Lua app owns under
+the system status bar: a palette PNG (255 colours, dithered), not interlaced, no alpha.
+
+Boards with a status bar (lumen, pearl, black_pearl, icon_grid, grouped_list, dial, streaming) are the
+board cropped to rows 22..239. Boards with none (control_tiles, terminal, epaper, bold_blocks,
+monster_rpg) are the whole 320x240 board scaled uniformly by 218/240 to 291x218 and centred (x offset 14),
+the side margins filled with the board's ground (control_tiles: the wallpaper at full width).
+
+Blanked on every face, for you to draw: the owner, the badge ID, the Wi-Fi/online state, the battery and
+Wi-Fi glyphs, page dots and page counts, the OS version. ALSO blanked, since the app has no permission
+for them: the !LAMPs figure AND its "!LAMPs" / "!LAMPs balance" label, and the Wi-Fi network name. Nothing
+neutral is baked in their place: put the badge ID or "Online"/"Offline" there, or leave them empty.
+Titles such as "Wi-Fi", "Quests", "MY BADGE", "BADGE CARD", menu entries and hints are baked in.
+
+Per field: the board's sample text, its box in FINAL image coordinates (x, y, w, h), alignment, colour,
+opacity if any, the board's face and size after scaling, and the nearest Lua face (mono 12, 14, 20, 32).
+ICON lines are removed glyphs/dots with their boxes. chip-box is a chip's background rect, still baked.
+
+== lumen.png  20896 bytes  (cropped)
+  ICON  "Wi-Fi, network not found"  box x=268.5 y=-16.0 w=12.0 h=12.0
+  ICON  "Battery full, on USB power"  box x=286.5 y=-15.0 w=21.5 h=10.0
+  TEXT  "!LAMPs balance"  box x=22.0 y=13.0 w=77.3 h=13.0  Geist 10.0px wt=500 color=#AEB4C4 align=start  -> Lua mono 12
+  TEXT  "1,250"  box x=22.0 y=22.0 w=109.8 h=60.0  Geist 46.0px wt=600 color=#FFFFFF align=start  -> Lua 32
+  TEXT  "@YourHandle"  box x=22.0 y=82.0 w=85.8 h=16.0  Geist 12.0px wt=500 color=#E3E6EF align=start  -> Lua mono 12
+  TEXT  "EMU001"  box x=118.8 y=84.0 w=32.4 h=12.0  Geist Mono 9.0px wt=400 color=#C9CEDB align=start chip-bg=#FFFFFF a=0.09 chip-box=(113.8,83.0,42.4,14.0) radius=6px  -> Lua mono 12
+  TEXT  "Wysdom.xyz"  box x=20.0 y=142.0 w=62.9 h=14.0  Geist 11.0px wt=400 color=#AEB4C4 align=start  -> Lua mono 12
+  TEXT  "Not found"  box x=30.0 y=173.0 w=46.7 h=13.0  Geist 10.0px wt=500 color=#FFC79A align=start  -> Lua mono 12
+  ICON  "Page 1 of 2"  box x=0.0 y=204.0 w=320.0 h=4.0
+
+== pearl.png  23808 bytes  (cropped)
+  ICON  "Wi-Fi, network not found"  box x=268.5 y=-16.0 w=12.0 h=12.0
+  ICON  "Battery full, on USB power"  box x=286.5 y=-15.0 w=21.5 h=10.0
+  TEXT  "!LAMPs balance"  box x=22.0 y=13.0 w=77.3 h=13.0  Geist 10.0px wt=500 color=#5A5370 align=start  -> Lua mono 12
+  TEXT  "1,250"  box x=22.0 y=22.0 w=109.8 h=60.0  Geist 46.0px wt=600 color=#1F1B2E align=start  -> Lua 32
+  TEXT  "@YourHandle"  box x=22.0 y=82.0 w=85.8 h=16.0  Geist 12.0px wt=500 color=#2B2540 align=start  -> Lua mono 12
+  TEXT  "EMU001"  box x=118.8 y=84.0 w=32.4 h=12.0  Geist Mono 9.0px wt=400 color=#3A3450 align=start chip-bg=#1F1B2E a=0.08 chip-box=(113.8,83.0,42.4,14.0) radius=6px  -> Lua mono 12
+  TEXT  "Wysdom.xyz"  box x=20.0 y=142.0 w=62.9 h=14.0  Geist 11.0px wt=400 color=#5A5370 align=start  -> Lua mono 12
+  TEXT  "Not found"  box x=30.0 y=173.0 w=47.7 h=13.0  Geist 10.0px wt=600 color=#9A3C00 align=start  -> Lua mono 12
+  ICON  "Page 1 of 2"  box x=0.0 y=204.0 w=320.0 h=4.0
+
+== black_pearl.png  20277 bytes  (cropped)
+  ICON  "Wi-Fi, network not found"  box x=268.5 y=-16.0 w=12.0 h=12.0
+  ICON  "Battery full, on USB power"  box x=286.5 y=-15.0 w=21.5 h=10.0
+  TEXT  "!LAMPs balance"  box x=22.0 y=13.0 w=77.3 h=13.0  Geist 10.0px wt=500 color=#C2C0D2 align=start  -> Lua mono 12
+  TEXT  "1,250"  box x=22.0 y=22.0 w=109.8 h=60.0  Geist 46.0px wt=600 color=#FFFFFF align=start  -> Lua 32
+  TEXT  "@YourHandle"  box x=22.0 y=82.0 w=85.8 h=16.0  Geist 12.0px wt=500 color=#ECEAF4 align=start  -> Lua mono 12
+  TEXT  "EMU001"  box x=118.8 y=84.0 w=32.4 h=12.0  Geist Mono 9.0px wt=400 color=#D4D2E0 align=start chip-bg=#FFFFFF a=0.12 chip-box=(113.8,83.0,42.4,14.0) radius=6px  -> Lua mono 12
+  TEXT  "Wysdom.xyz"  box x=20.0 y=142.0 w=62.9 h=14.0  Geist 11.0px wt=400 color=#C2C0D2 align=start  -> Lua mono 12
+  TEXT  "Not found"  box x=30.0 y=173.0 w=46.7 h=13.0  Geist 10.0px wt=500 color=#FFD6B8 align=start  -> Lua mono 12
+  ICON  "Page 1 of 2"  box x=0.0 y=204.0 w=320.0 h=4.0
+
+== icon_grid.png  17039 bytes  (cropped)
+  ICON  "Wi-Fi, network not found"  box x=266.5 y=-17.0 w=12.0 h=12.0
+  ICON  "Battery full, on USB power"  box x=284.5 y=-16.0 w=21.5 h=10.0
+
+== grouped_list.png  7130 bytes  (cropped)
+  ICON  "Wi-Fi, network not found"  box x=266.5 y=-17.0 w=12.0 h=12.0
+  ICON  "Battery full, on USB power"  box x=284.5 y=-16.0 w=21.5 h=10.0
+  TEXT  "@YourHandle"  box x=66.0 y=12.5 w=102.7 h=18.0  Geist 14.0px wt=600 color=#FFFFFF align=start  -> Lua 14
+  TEXT  "EMU001 · 1,250 !LAMPs"  box x=66.0 y=29.5 w=106.6 h=13.0  Geist 10.0px wt=400 color=#C4C8D6 align=start  -> Lua mono 12
+  TEXT  "Not found"  box x=228.3 y=65.5 w=53.7 h=16.0  Geist 12.0px wt=400 color=#9A3C00 align=start  -> Lua mono 12
+  ICON  "Page 1 of 2"  box x=0.0 y=205.0 w=320.0 h=4.0
+
+== dial.png  12051 bytes  (cropped)
+  ICON  "Wi-Fi, network not found"  box x=266.5 y=-17.0 w=12.0 h=12.0
+  ICON  "Battery full, on USB power"  box x=284.5 y=-16.0 w=21.5 h=10.0
+  TEXT  "EMU001"  box x=200.6 y=19.0 w=32.4 h=12.0  Geist Mono 9.0px wt=400 color=#D0D0D8 align=start chip-bg=#FFFFFF a=0.1 chip-box=(195.6,17.0,42.4,16.0) radius=6px  -> Lua mono 12
+  TEXT  "1,250"  box x=82.0 y=30.5 w=113.4 h=62.0  Geist 48.0px wt=600 color=#FFFFFF align=start  -> Lua 32
+  TEXT  "!LAMPs"  box x=82.0 y=88.5 w=36.2 h=13.0  Geist 10.0px wt=500 color=#B4B4BE align=start  -> Lua mono 12
+  TEXT  "@YourHandle"  box x=82.0 y=106.0 w=85.8 h=16.0  Geist 12.0px wt=500 color=#FFFFFF align=start  -> Lua mono 12
+  TEXT  "Not found"  box x=119.0 y=148.5 w=56.1 h=16.0  Geist 12.0px wt=600 color=#FFB870 align=start  -> Lua mono 12
+  TEXT  "Wysdom.xyz"  box x=119.0 y=163.5 w=56.0 h=13.0  Geist 10.0px wt=400 color=#B4B4BE align=start  -> Lua mono 12
+  ICON  "Page 1 of 2"  box x=0.0 y=202.0 w=320.0 h=4.0
+
+== control_tiles.png  17500 bytes  (scaled 0.9083, x offset 14)
+  TEXT  "@YourHandle"  box x=173.4 y=15.4 w=64.7 h=11.8  Geist 9.1px wt=500 color=#D8DAE6 align=start  -> Lua mono 12
+  TEXT  "1,250"  box x=173.4 y=31.8 w=57.0 h=30.9  Geist 23.6px wt=600 color=#FFFFFF align=start  -> Lua 20
+  TEXT  "!LAMPs"  box x=234.9 y=46.3 w=31.1 h=11.8  Geist 9.1px wt=500 color=#D8DAE6 align=start  -> Lua mono 12
+  ICON  "Page 1 of 2"  box x=14.0 y=208.0 w=290.7 h=3.6
+
+== terminal.png  28374 bytes  (scaled 0.9083, x offset 14)
+  TEXT  "solana-os 2.1.0"  box x=23.1 y=6.4 w=89.9 h=12.7  JetBrains Mono 10.0px wt=700 color=#3DFFA2 align=start  -> Lua mono 12
+  TEXT  "none"  box x=223.6 y=6.4 w=24.0 h=12.7  JetBrains Mono 10.0px wt=400 color=#FFB866 align=start  -> Lua mono 12
+  TEXT  "1,250 !LAMPs"  box x=116.3 y=47.2 w=71.9 h=12.7  JetBrains Mono 10.0px wt=700 color=#020503 align=start  -> Lua mono 12
+  TEXT  "EMU001"  box x=254.2 y=47.2 w=36.0 h=12.7  JetBrains Mono 10.0px wt=700 color=#020503 align=start  -> Lua mono 12
+  TEXT  "not found"  box x=116.3 y=65.4 w=54.0 h=12.7  JetBrains Mono 10.0px wt=400 color=#FFB866 align=start  -> Lua mono 12
+  TEXT  "Wysdom.xyz"  box x=230.2 y=65.4 w=60.0 h=12.7  JetBrains Mono 10.0px wt=400 color=#3DFFA2 opacity=0.7 align=start  -> Lua mono 12
+  TEXT  "8 lua apps installed"  box x=116.3 y=156.2 w=119.9 h=12.7  JetBrains Mono 10.0px wt=400 color=#3DFFA2 opacity=0.7 align=start  -> Lua mono 12
+  TEXT  "[1/2]"  box x=265.6 y=184.4 w=30.0 h=12.7  JetBrains Mono 10.0px wt=400 color=#3DFFA2 opacity=0.7 align=start  -> Lua mono 12
+
+== epaper.png  32227 bytes  (scaled 0.9083, x offset 14)
+  TEXT  "NO WI-FI · USB · 2.1.0"  box x=178.7 y=7.3 w=115.1 h=10.0  IBM Plex Mono 8.2px wt=400 color=#141412 align=start  -> Lua mono 12
+  TEXT  "@YourHandle"  box x=24.9 y=48.1 w=102.8 h=15.4  Newsreader 15.4px wt=500 italic color=#141412 align=start  -> Lua 14
+  TEXT  "1,250"  box x=24.9 y=90.4 w=101.3 h=41.8  Newsreader 41.8px wt=500 color=#141412 align=start  -> Lua 32
+  TEXT  "!LAMPS"  box x=24.9 y=135.8 w=33.3 h=10.0  IBM Plex Mono 8.2px wt=400 color=#141412 align=start  -> Lua mono 12
+  TEXT  "EMU001"  box x=105.2 y=180.8 w=36.0 h=12.7  IBM Plex Mono 10.0px wt=500 color=#141412 align=start  -> Lua mono 12
+  TEXT  "NOT FOUND"  box x=239.4 y=40.9 w=47.1 h=10.0  IBM Plex Mono 8.2px wt=400 color=#ECE8DD align=start  -> Lua mono 12
+  TEXT  "PAGE 1 OF 2"  box x=236.2 y=203.5 w=57.6 h=10.0  IBM Plex Mono 8.2px wt=400 color=#141412 align=start  -> Lua mono 12
+
+== bold_blocks.png  13724 bytes  (scaled 0.9083, x offset 14)
+  TEXT  "NO WI-FI"  box x=220.6 y=5.5 w=40.1 h=11.8  Space Mono 8.2px wt=700 color=#111111 align=start chip-bg=#FFD23F chip-box=(215.1,4.5,51.0,13.6) radius=8px  -> Lua mono 12
+  TEXT  "EMU001"  box x=110.7 y=33.5 w=30.8 h=13.9  Space Mono 8.2px wt=700 color=#111111 align=start chip-bg=#FFD23F chip-box=(105.3,32.2,41.8,16.4) radius=8px  -> Lua mono 12
+  TEXT  "1,250"  box x=33.1 y=50.4 w=102.5 h=40.9  Archivo 37.2px wt=900 color=#FFFFFF align=start  -> Lua 32
+  TEXT  "!LAMPs"  box x=33.1 y=91.3 w=33.3 h=13.6  Space Mono 9.1px wt=700 color=#FFFFFF align=start  -> Lua mono 12
+  TEXT  "@YourHandle"  box x=33.1 y=110.8 w=82.1 h=12.7  Archivo 10.9px wt=700 color=#FFFFFF align=start  -> Lua mono 12
+  TEXT  "Wysdom.xyz"  box x=177.5 y=55.4 w=50.0 h=11.8  Space Mono 8.2px wt=700 color=#111111 align=start  -> Lua mono 12
+  TEXT  "NOT FOUND"  box x=235.1 y=55.4 w=45.1 h=11.8  Space Mono 8.2px wt=700 color=#111111 align=start chip-bg=#FF5A36 chip-box=(231.5,56.3,52.3,10.9) radius=0px  -> Lua mono 12
+  TEXT  "1/2"  box x=280.6 y=202.6 w=15.0 h=11.8  Space Mono 8.2px wt=700 color=#111111 align=start  -> Lua mono 12
+
+== monster_rpg.png  9018 bytes  (scaled 0.9083, x offset 14)
+  TEXT  "No.EMU001"  box x=118.0 y=14.5 w=61.3 h=10.0  Silkscreen 8.2px wt=700 color=#FFFFFF align=start  -> Lua mono 12
+  TEXT  "@YourHandle"  box x=88.4 y=34.5 w=90.9 h=10.0  Silkscreen 8.2px wt=700 color=#23233A align=start  -> Lua mono 12
+  TEXT  "!LAMPs"  box x=32.2 y=69.9 w=33.7 h=10.0  Silkscreen 8.2px wt=400 color=#5A5A70 align=start  -> Lua mono 12
+  TEXT  "1,250"  box x=101.9 y=53.6 w=77.4 h=30.9  Silkscreen 23.6px wt=400 color=#23233A align=start  -> Lua 20
+  TEXT  "NONE"  box x=149.7 y=92.7 w=29.6 h=10.0  Silkscreen 8.2px wt=700 color=#B83A16 align=start  -> Lua mono 12
+  TEXT  "What will @YourHandle do?"  box x=34.0 y=170.8 w=170.3 h=11.8  Silkscreen 9.1px wt=400 color=#23233A align=start  -> Lua mono 12
+
+== streaming.png  23905 bytes  (cropped)
+  ICON  "Wi-Fi, network not found"  box x=275.0 y=-16.0 w=12.0 h=12.0
+  TEXT  "1,250 !LAMPs"  box x=14.0 y=75.5 w=72.1 h=14.0  Geist 11.0px wt=700 color=#57D98A align=start  -> Lua mono 12
+  TEXT  "2.1.0"  box x=99.1 y=78.0 w=18.6 h=10.0  Geist 8.0px wt=600 color=#E6E6EA align=start  -> Lua mono 12
+  TEXT  "8 categories"  box x=130.8 y=75.5 w=62.0 h=14.0  Geist 11.0px wt=400 color=#C9C9D0 align=start  -> Lua mono 12

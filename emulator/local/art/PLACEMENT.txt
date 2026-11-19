@@ -1,0 +1,40 @@
+Pearl home artwork, rendered from the design's own CSS (HomeDark.dc.html and
+Main.dc.html) with headless Chrome at 1x, cropped to the art's bounding box,
+converted with tools/img2lvgl.py (RGB565A8). The .png beside each .c is the
+same sprite for reference.
+
+Each sprite is already clipped to its card's 16 px rounded corners, so the
+card needs no clip_corner. Offsets are from the card's top-left corner, for
+the design's card sizes:
+
+  hero (My Badge)  304 x 108   at x=8,   y=2   in the 320x218 app root
+  Wi-Fi            149 x 80    at x=8,   y=116
+  Quests           149 x 80    at x=163, y=116
+  page dots        4 px high   at y=204
+
+symbol                  size      card    offset in card (x, y)
+img_black_pearl_hero    132x108   badge   172, 0     glow + both pearls
+img_black_pearl_wifi     64x54    wifi     85, 26    rings + glowing dot
+img_black_pearl_quest   101x71    quests   48, 9     violet glow + diamond
+img_pearl_hero          117x100   badge   183, 8     both pearls + soft shadow
+img_pearl_wifi           64x54    wifi     85, 26    rings + dot
+img_pearl_quest          46x46    quests   86, 27    diamond
+
+All six sit flush with the card's right edge (and bottom edge, except
+img_pearl_quest), so on a card of another size anchor them bottom-right:
+right inset = 0 except img_pearl_hero 4 and img_pearl_quest 17;
+bottom inset = 0 except img_pearl_quest 7.
+
+Draw order in a card: glass fill, sprite, text, border.
+
+Text in the design (card coordinates):
+  hero   "!LAMPs balance" 10 px at 14,12; the figure 46 px semibold at 14,27;
+         handle 12 px at 14,81; badge ID chip (mono 9 px, pad 1x5, radius 6,
+         white 12 % / ink 8 % fill) 6 px right of the handle
+  tiles  title 13 px semibold at 12,10; sub line 11 px at 12,27;
+         Wi-Fi state: 5 px dot + 10 px text, bottom-left at 12, 10 from bottom
+
+Regenerate: the HTML snippets are the art divs of each card inside a
+card-sized, border-radius 16, overflow hidden box on a transparent page:
+  chrome --headless=new --default-background-color=00000000 \
+         --force-device-scale-factor=1 --window-size=304,108 --screenshot=hero.png hero.html
