@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 13 px
  * Bpp: 4
- * Opts: --no-compress --no-prefilter --bpp 4 --size 13 --font node_modules/@fontsource/geist/files/geist-latin-600-normal.woff --range 0x20-0x7E,0xB0,0x2022 --format lvgl --lv-include lvgl.h --lv-fallback lv_font_montserrat_12 --force-fast-kern-format -o /Users/andreachello/Coding/solana-os/emulator/local/fonts/pearl_font_13.c
+ * Opts: --no-compress --no-prefilter --bpp 4 --size 13 --font node_modules/@fontsource/geist/files/geist-latin-600-normal.woff --range 0x20-0x7E,0xB0,0x2022 --format lvgl --lv-include lvgl.h --lv-fallback lv_font_montserrat_12 --force-fast-kern-format -o pearl_font_13.c
  ******************************************************************************/
 
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE

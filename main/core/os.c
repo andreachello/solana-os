@@ -133,9 +133,53 @@ lv_obj_t *os_status_bar(void)
 // The bar's left end for an app: its name after the logo; in the Streaming
 // theme a back chevron and the name in bold, and on the home screen only the
 // logo (the home layout puts its tabs beside it).
+static lv_obj_t *s_cell, *s_cell_fill, *s_cell_nub;     // UI_BAR_SLIM's battery outline
+static bool s_bare;
+
+// Hide the bar's own contents (the logo, the title, the Wi-Fi glyph, the
+// battery) so a home layout whose design has no system bar can draw its own
+// header there, as children of os_status_bar(). The OS puts them back when
+// any app is entered: a layout calls this in its enter() and need not undo it
+// (it deletes what it added to the bar when its own objects go).
+void os_status_bare(bool on)
+{
+    s_bare = on;
+    bool slim = ui_theme()->bar == UI_BAR_SLIM, stream = ui_theme()->bar == UI_BAR_STREAM;
+    bool home = s_app == &os_launcher;
+    lv_obj_set_hidden(s_title, on);
+    lv_obj_set_hidden(s_wifi, on);
+    lv_obj_set_hidden(s_batt, on || slim);
+    lv_obj_set_hidden(s_logo, on || slim || (stream && !home));
+    lv_obj_set_hidden(s_back, on || !stream || home);
+    if (s_cell) {
+        lv_obj_set_hidden(s_cell, on);
+        lv_obj_set_hidden(s_cell_nub, on);
+    }
+}
+
+// The title's text and colour (a COL_*, 0 = text) until the next app is
+// entered: UI_BAR_SLIM's home layouts name the focused item there.
+void os_status_title(const char *text, uint32_t color)
+{
+    lv_label_set_text(s_title, text ? text : "");
+    lv_obj_set_style_text_color(s_title, ui_col(color ? color : COL_TEXT), 0);
+}
+
 static void status_title(const os_app_t *app)
 {
     bool home = app == &os_launcher;
+    if (s_bare) {
+        s_bare = false;
+        lv_obj_set_hidden(s_title, false);
+        lv_obj_set_hidden(s_wifi, false);
+        lv_obj_set_hidden(s_batt, ui_theme()->bar == UI_BAR_SLIM);
+        lv_obj_set_hidden(s_logo, ui_theme()->bar == UI_BAR_SLIM);
+        if (s_cell) {
+            lv_obj_set_hidden(s_cell, false);
+            lv_obj_set_hidden(s_cell_nub, false);
+        }
+    }
+    lv_obj_set_style_text_color(s_title, ui_col(COL_TEXT), 0);
     if (ui_theme()->bar == UI_BAR_STREAM) {
         lv_label_set_text(s_title, home ? "" : app->name);
         lv_obj_set_hidden(s_logo, !home);
@@ -173,6 +217,40 @@ static void status_create(lv_obj_t *scr)
     lv_obj_align(s_batt, LV_ALIGN_RIGHT_MID, -6, 0);
     s_wifi = ui_label(bar, &lv_font_montserrat_14, COL_DIM, LV_SYMBOL_WIFI);
     lv_obj_align(s_wifi, LV_ALIGN_RIGHT_MID, -76, 0);
+
+    s_cell = s_cell_fill = s_cell_nub = NULL;
+    s_bare = false;
+    if (ui_theme()->bar == UI_BAR_SLIM) {
+        // No logo and no figures: a small bold title, a small Wi-Fi glyph and
+        // the battery as an outline that fills.
+        lv_obj_set_hidden(logo, true);
+        lv_obj_set_hidden(s_batt, true);
+        lv_obj_set_style_text_font(s_title, &stream_bold_11, 0);
+        lv_obj_align(s_title, LV_ALIGN_LEFT_MID, 14, 0);
+        lv_obj_set_style_text_font(s_wifi, &lv_font_montserrat_12, 0);
+        s_cell = lv_obj_create(bar);
+        lv_obj_remove_style_all(s_cell);
+        lv_obj_set_size(s_cell, 19, 10);
+        lv_obj_set_pos(s_cell, 284, (OS_STATUS_H - 10) / 2);
+        lv_obj_set_style_radius(s_cell, 3, 0);
+        lv_obj_set_style_border_width(s_cell, 1, 0);
+        lv_obj_set_style_border_color(s_cell, ui_col(COL_TEXT), 0);
+        lv_obj_set_style_border_opa(s_cell, 140, 0);
+        lv_obj_set_style_pad_all(s_cell, 1, 0);
+        lv_obj_set_scrollable(s_cell, false);
+        s_cell_fill = lv_obj_create(s_cell);
+        lv_obj_remove_style_all(s_cell_fill);
+        lv_obj_set_size(s_cell_fill, 15, 6);
+        lv_obj_set_style_radius(s_cell_fill, 2, 0);
+        lv_obj_set_style_bg_opa(s_cell_fill, LV_OPA_COVER, 0);
+        lv_obj_set_style_bg_color(s_cell_fill, ui_col(COL_TEXT), 0);
+        s_cell_nub = lv_obj_create(bar);
+        lv_obj_remove_style_all(s_cell_nub);
+        lv_obj_set_size(s_cell_nub, 2, 4);
+        lv_obj_set_pos(s_cell_nub, 304, (OS_STATUS_H - 4) / 2);
+        lv_obj_set_style_bg_opa(s_cell_nub, 140, 0);
+        lv_obj_set_style_bg_color(s_cell_nub, ui_col(COL_TEXT), 0);
+    }
 
     // The bar's bottom edge, in the theme's way: the brand gradient hairline,
     // a plain rule, or nothing.
@@ -223,6 +301,13 @@ static void status_update(void)
     }
     lv_obj_set_style_text_color(s_wifi, ui_col(c), 0);
     lv_obj_align_to(s_wifi, s_batt, LV_ALIGN_OUT_LEFT_MID, -8, 0);
+    if (s_cell) {
+        // The outline fills with the charge (full on USB), low in the warning colour.
+        int pct = mv < 0 ? 0 : mv > 4300 ? 100 : bsp_battery_percent(mv);
+        lv_obj_set_width(s_cell_fill, 1 + 14 * pct / 100);
+        lv_obj_set_style_bg_color(s_cell_fill, ui_col(pct <= 10 ? COL_ERR : COL_TEXT), 0);
+        lv_obj_align(s_wifi, LV_ALIGN_LEFT_MID, 266, 0);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -797,6 +882,87 @@ bool os_theme_set(int id)
 }
 
 // "theme": list the themes, or switch to one by id (as the Themes app does).
+// "tile": what My Badge's picture tile shows (apps/badge: NVS "badge"), from
+// the console, so a handle needn't be typed on the d-pad keyboard.
+static int cmd_tile(int argc, char **argv)
+{
+    static const char *const kinds[] = {"pic", "x", "tg", "link"};
+    nvs_handle_t h;
+    if (nvs_open("badge", NVS_READWRITE, &h) != ESP_OK) {
+        printf("can't open the settings\n");
+        return 1;
+    }
+    int rc = 0;
+    if (argc >= 2 && !strcmp(argv[1], "ticket-name")) {
+        // The name the ticket pass shows ("off" goes back to the owner's).
+        if (argc < 3) {
+            char t[40] = "";
+            size_t n = sizeof(t);
+            nvs_get_str(h, "tname", t, &n);
+            printf("ticket name: %s\n", t[0] ? t : "(the badge owner's)");
+        } else if (strlen(argv[2]) > 39) {
+            printf("too long: a name is at most 39 characters\n");
+            rc = 1;
+        } else {
+            nvs_set_str(h, "tname", !strcmp(argv[2], "off") ? "" : argv[2]);
+            nvs_commit(h);
+            printf("ticket name saved\n");
+        }
+        nvs_close(h);
+        return rc;
+    }
+    if (argc >= 2 && !strcmp(argv[1], "ticket")) {
+        // The event ticket: what its QR code says ("" or "off" removes it).
+        if (argc < 3) {
+            char t[304] = "";
+            size_t n = sizeof(t);
+            nvs_get_str(h, "ticket", t, &n);
+            printf("ticket: %s\n", t[0] ? t : "(not set)");
+        } else if (strlen(argv[2]) > 300) {
+            printf("too long: a ticket code is at most 300 characters\n");
+            rc = 1;
+        } else {
+            nvs_set_str(h, "ticket", !strcmp(argv[2], "off") ? "" : argv[2]);
+            nvs_commit(h);
+            printf("ticket saved: UP on My Badge shows it\n");
+        }
+        nvs_close(h);
+        return rc;
+    }
+    if (argc < 2) {
+        int32_t mode = 0;
+        nvs_get_i32(h, "tile", &mode);
+        printf("tile shows: %s\n", mode > 0 && mode < 4 ? kinds[mode] : "pic");
+        for (int i = 1; i < 4; i++) {
+            char v[100] = "";
+            size_t n = sizeof(v);
+            nvs_get_str(h, kinds[i], v, &n);
+            printf("  %-4s %s\n", kinds[i], v[0] ? v : "(not set)");
+        }
+    } else {
+        int kind = -1;
+        for (int i = 0; i < 4; i++) {
+            if (!strcmp(argv[1], kinds[i])) {
+                kind = i;
+            }
+        }
+        if (kind < 0 || (argc > 2 && (kind == 0 || strlen(argv[2]) > 96))) {
+            printf("usage: tile [pic|x|tg|link] [handle or link, up to 96 characters]\n"
+                   "       tile ticket [code|off]   the event ticket's QR code, for UP on My Badge\n");
+            rc = 1;
+        } else {
+            if (argc > 2) {
+                nvs_set_str(h, kinds[kind], argv[2]);
+            }
+            nvs_set_i32(h, "tile", kind);
+            nvs_commit(h);
+            printf("tile: %s%s%s (open My Badge again to see it)\n", kinds[kind], argc > 2 ? " " : "", argc > 2 ? argv[2] : "");
+        }
+    }
+    nvs_close(h);
+    return rc;
+}
+
 static int cmd_theme(int argc, char **argv)
 {
     if (argc < 2) {
@@ -862,6 +1028,7 @@ void os_start(void)
         ESP_LOGE(TAG, "buttons unavailable; use the console 'key' command");
     }
     os_cmd_register("theme", "theme [id] - list the themes, or switch to one", cmd_theme);
+    os_cmd_register("tile", "tile [pic|x|tg|link|ticket] [value] - My Badge's picture tile (picture or QR), and the event ticket", cmd_tile);
     xTaskCreate(os_task, "os", 6144, NULL, 4, &s_task);
 }
 

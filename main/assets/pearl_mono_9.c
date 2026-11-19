@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 9 px
  * Bpp: 4
- * Opts: --no-compress --no-prefilter --bpp 4 --size 9 --font node_modules/@fontsource/geist-mono/files/geist-mono-latin-500-normal.woff --range 0x20-0x7E --format lvgl --lv-include lvgl.h --force-fast-kern-format -o /Users/andreachello/Coding/solana-os/emulator/local/fonts/pearl_mono_9.c
+ * Opts: --no-compress --no-prefilter --bpp 4 --size 9 --font node_modules/@fontsource/geist-mono/files/geist-mono-latin-500-normal.woff --range 0x20-0x7E --format lvgl --lv-include lvgl.h --force-fast-kern-format -o pearl_mono_9.c
  ******************************************************************************/
 
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE

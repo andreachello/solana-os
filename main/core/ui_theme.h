@@ -18,7 +18,7 @@ enum {
     UI_THEME_LIGHT = 1,
     UI_THEME_PEARL = 2,
     UI_THEME_BLACK_PEARL = 3,
-    UI_THEME_GLOW = 4,          // reserved: not built yet
+    UI_THEME_GLOW = 4,          // "Lumen"
     UI_THEME_ICONS = 5,
     UI_THEME_GROUPED = 6,
     UI_THEME_DIAL = 7,
@@ -51,6 +51,7 @@ typedef enum {
     UI_BAR_PLAIN,       // nothing
     UI_BAR_RULE,        // a solid rule in the border colour, border_w thick
     UI_BAR_STREAM,      // no edge; a back chevron and the app's name in bold (the home screen puts its tabs there)
+    UI_BAR_SLIM,        // no edge, no logo, no percentage: a small bold title, the Wi-Fi glyph and a battery outline
 } ui_bar_t;
 
 typedef enum {
@@ -61,6 +62,11 @@ typedef enum {
     UI_HOME_LIST,
     UI_HOME_DIAL,
     UI_HOME_RPG,
+    UI_HOME_BLOCKS,     // the Bold blocks page: a block per app, each its own colour (core/home/home_blocks.c)
+    UI_HOME_CONTROLS,   // round controls and glass tiles over the wallpaper, no status bar (core/home/home_controls.c)
+    UI_HOME_EPAPER,     // a printed page: My Badge as a column, a numbered list, no status bar (core/home/home_epaper.c)
+    UI_HOME_TERM,       // a console listing under a prompt, no status bar (core/home/home_term.c)
+    UI_HOME_LUMEN,      // the pearl arrangement at night, then pages of glowing icon tiles (core/home/home_lumen.c)
     UI_HOME_STREAM,     // a feature banner over a row of posters (core/home/home_stream.c)
 } ui_home_t;
 

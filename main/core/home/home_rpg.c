@@ -1,19 +1,29 @@
-// Home layout: a retro handheld RPG's menu. A badge card on the left, the
-// command menu with its cursor on the right, and a dialogue box underneath
-// that asks what to do and carries the key hint.
+// Home layout: a retro handheld RPG's menu, over a sky and a strip of grass
+// with a gem on it. A badge card on the left (the owner, the !LAMPs figure, a
+// Wi-Fi signal bar), the command menu with its cursor on the right, and a
+// dialogue box underneath that asks what to do and carries the key hint. No
+// status bar: the layout has the whole screen. Positions are the design's, in
+// screen pixels.
 
 #include <stdio.h>
 #include <string.h>
 #include "home.h"
 
 #define ROWS        7
-#define ROW_H       20
-#define TOP_H       152
-#define MENU_W      122
-#define CARD_W      (OS_ROOT_W - 16 - MENU_W - 6)
+#define ROW_Y       19
+#define ROW_PITCH   21.5f
+#define INK         0x23233A
+#define GREY        0x5A5A70
+#define CREAM       0xFFFDF2
+#define GOLD        0xD8B848
+#define RED         0xD8432F
+
+#define F_TEXT      (&rpg_font_9)
+#define F_BOLD      (&rpg_bold_10)
+#define F_NUM       (&rpg_num_26)
 
 static lv_obj_t *s_cursor, *s_names[ROWS], *s_ask, *s_keys;
-static lv_obj_t *s_owner, *s_id, *s_lamps, *s_wifi, *s_net;
+static lv_obj_t *s_owner, *s_id, *s_lamps, *s_wifi, *s_signal;
 static int s_top;
 
 static void set_text(lv_obj_t *label, const char *text)
@@ -23,38 +33,79 @@ static void set_text(lv_obj_t *label, const char *text)
     }
 }
 
-static lv_obj_t *field(lv_obj_t *card, int y, const char *name, const lv_font_t *font)
+static lv_obj_t *rect(lv_obj_t *parent, int x, int y, int w, int h, uint32_t hex)
 {
-    lv_obj_t *n = ui_label(card, &sol_mono_12, COL_DIM, name);
-    lv_obj_set_pos(n, 8, y + (font == &sol_font_32 ? 18 : 1));
-    lv_obj_t *v = ui_label(card, font, COL_TEXT, "");
-    lv_obj_set_style_max_width(v, CARD_W - 64, 0);
-    lv_label_set_long_mode(v, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_set_height(v, lv_font_get_line_height(font));
-    lv_obj_align(v, LV_ALIGN_TOP_RIGHT, -8, y);
-    return v;
+    lv_obj_t *o = lv_obj_create(parent);
+    lv_obj_remove_style_all(o);
+    lv_obj_set_pos(o, x, y);
+    lv_obj_set_size(o, w, h);
+    lv_obj_set_style_bg_opa(o, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(o, lv_color_hex(hex), 0);
+    lv_obj_set_scrollable(o, false);
+    return o;
+}
+
+static lv_obj_t *text(lv_obj_t *parent, const lv_font_t *font, int x, int y, uint32_t hex, const char *s)
+{
+    lv_obj_t *l = lv_label_create(parent);
+    lv_obj_set_style_text_font(l, font, 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(hex), 0);
+    lv_label_set_text(l, s);
+    lv_obj_set_pos(l, x, y);
+    return l;
+}
+
+// A text whose right edge sits at x (in the parent's coordinates).
+static lv_obj_t *text_right(lv_obj_t *parent, const lv_font_t *font, int x, int y, uint32_t hex)
+{
+    lv_obj_t *l = text(parent, font, 0, 0, hex, "");
+    lv_obj_update_layout(parent);
+    lv_obj_align(l, LV_ALIGN_TOP_RIGHT, x - lv_obj_get_content_width(parent), y);
+    return l;
+}
+
+// A panel: a dark frame with a soft drop under it, a cream face with a gold
+// inner line. Returns the face; children are in the frame's coordinates
+// minus (2, 2).
+static lv_obj_t *panel(lv_obj_t *parent, int x, int y, int w, int h)
+{
+    lv_obj_t *drop = rect(parent, x, y + 3, w, h, INK);
+    lv_obj_set_style_bg_opa(drop, 90, 0);
+    lv_obj_set_style_radius(drop, 8, 0);
+    lv_obj_t *frame = rect(parent, x, y, w, h, INK);
+    lv_obj_set_style_radius(frame, 8, 0);
+    lv_obj_t *face = rect(frame, 2, 2, w - 4, h - 4, CREAM);
+    lv_obj_set_style_radius(face, 6, 0);
+    lv_obj_set_style_border_width(face, 2, 0);
+    lv_obj_set_style_border_color(face, lv_color_hex(GOLD), 0);
+    return face;
 }
 
 static void info(void)
 {
     home_info_t in;
-    char text[64];
+    char buf[64];
     int i = home_find("badge");
+    bool owned = false;
     if (i >= 0) {
         home_info(home_app(i), &in);
+        owned = in.value[0];
         set_text(s_owner, in.line);
-        set_text(s_lamps, in.value[0] ? in.value : "-");
-        snprintf(text, sizeof(text), "ID %s", in.extra[0] ? in.extra : "-");
-        set_text(s_id, text);
-        snprintf(text, sizeof(text), "What will %s do?", in.value[0] ? in.line : "you");
-        set_text(s_ask, text);
+        set_text(s_lamps, in.value);
+        snprintf(buf, sizeof(buf), "No.%s", in.extra[0] ? in.extra : "------");
+        set_text(s_id, buf);
+        snprintf(buf, sizeof(buf), "What will %s do?", owned ? in.line : "you");
+        set_text(s_ask, buf);
     }
     i = home_find("wifi");
     if (i >= 0) {
         home_info(home_app(i), &in);
-        set_text(s_net, in.line);
-        set_text(s_wifi, in.value[0] ? in.value : "-");
-        lv_obj_set_style_text_color(s_wifi, ui_col(in.value_color ? in.value_color : COL_TEXT), 0);
+        bool ok = in.value_color == COL_OK;
+        set_text(s_wifi, ok ? "OK" : in.value[0] ? in.value : "NONE");
+        lv_obj_set_style_text_color(s_wifi, lv_color_hex(ok ? 0x2E7D4F : 0xB83A16), 0);
+        // The signal bar: full when joined, a stub otherwise.
+        lv_obj_set_width(s_signal, ok ? 71 : 9);
+        lv_obj_set_style_bg_color(s_signal, lv_color_hex(ok ? 0x4FB06D : 0xE8552D), 0);
     }
 }
 
@@ -74,56 +125,67 @@ static void render(bool list)
     }
     for (int i = 0; i < ROWS; i++) {
         const os_app_t *app = home_app(s_top + i);
-        lv_label_set_text(s_names[i], app ? app->name : "");
+        // The menu of the design says STORE.
+        lv_label_set_text(s_names[i], !app ? "" : !strcmp(app->id, "store") ? "Store" : app->name);
     }
-    lv_obj_set_y(s_cursor, 8 + (sel - s_top) * ROW_H);
+    lv_obj_set_y(s_cursor, ROW_Y - 10 + (int)((sel - s_top) * ROW_PITCH));
     char keys[64];
-    snprintf(keys, sizeof(keys), LV_SYMBOL_UP LV_SYMBOL_DOWN " move   SELECT open   %d/%d", sel + 1, count);
+    snprintf(keys, sizeof(keys), "D-PAD move   SELECT open   %d/%d", sel / ROWS + 1, (count + ROWS - 1) / ROWS);
     lv_label_set_text(s_keys, keys);
-    if (list) {
-        info();
-    }
+    info();
 }
 
 static void enter(lv_obj_t *root)
 {
-    // The badge card, under a strip in the accent colour.
-    lv_obj_t *card = home_tile(root, 8, 4, CARD_W, TOP_H - 4);
-    lv_obj_set_style_clip_corner(card, true, 0);
-    lv_obj_t *strip = lv_obj_create(card);
-    lv_obj_remove_style_all(strip);
-    lv_obj_set_size(strip, CARD_W, 22);
-    lv_obj_set_style_bg_opa(strip, LV_OPA_COVER, 0);
-    lv_obj_set_style_bg_color(strip, ui_accent(), 0);
-    lv_obj_t *l = ui_label(strip, &sol_mono_12, COL_TEXT, "BADGE CARD");
-    lv_obj_set_style_text_color(l, ui_focus_fg(), 0);
-    lv_obj_align(l, LV_ALIGN_LEFT_MID, 8, 0);
-    s_id = ui_label(strip, &sol_mono_12, COL_TEXT, "");
-    lv_obj_set_style_text_color(s_id, ui_focus_fg(), 0);
-    lv_obj_align(s_id, LV_ALIGN_RIGHT_MID, -10, 0);
-    s_owner = field(card, 28, "NAME", &sol_font_14);
-    s_lamps = field(card, 50, "!LAMPs", &sol_font_32);
-    s_wifi = field(card, 96, "WI-FI", &sol_mono_12);
-    s_net = field(card, 116, "NET", &sol_mono_12);
+    lv_obj_t *owner = lv_obj_create(root);
+    lv_obj_remove_style_all(owner);
+    lv_obj_t *scr = home_fullscreen(owner);
+
+    // The sky, the grass and the checkered edge between them.
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0xBFE8F5), 0);
+    rect(scr, 0, 110, OS_ROOT_W, 130, 0x9ED8A8);
+    for (int x = 0; x < OS_ROOT_W; x += 12) {
+        rect(scr, x, 104, 6, 6, 0x86C98E);
+    }
+    lv_obj_t *gem = lv_image_create(scr);
+    lv_image_set_src(gem, &img_rpg_gem);
+    lv_obj_set_pos(gem, 76, 132);
+
+    // The badge card, under a strip in red.
+    lv_obj_t *card = panel(scr, 8, 8, 186, 116);
+    lv_obj_t *strip = rect(card, 2, 2, 178, 20, RED);
+    text(strip, F_TEXT, 8, 4, 0xFFFFFF, "BADGE CARD");
+    s_id = text_right(strip, F_TEXT, 170, 4, 0xFFFFFF);
+    text(card, F_TEXT, 10, 28, GREY, "NAME");
+    s_owner = text_right(card, F_BOLD, 172, 27, INK);
+    text(card, F_TEXT, 10, 67, GREY, "!LAMPs");
+    s_lamps = text_right(card, F_NUM, 172, 50, INK);
+    text(card, F_TEXT, 10, 92, GREY, "WI-FI");
+    lv_obj_t *bar = rect(card, 54, 94, 79, 8, CREAM);
+    lv_obj_set_style_radius(bar, 4, 0);
+    lv_obj_set_style_border_width(bar, 2, 0);
+    lv_obj_set_style_border_color(bar, lv_color_hex(INK), 0);
+    s_signal = rect(bar, 0, 0, 9, 4, 0xE8552D);
+    s_wifi = text_right(card, F_BOLD, 172, 91, 0xB83A16);
 
     // The command menu.
-    lv_obj_t *menu = home_tile(root, OS_ROOT_W - 8 - MENU_W, 4, MENU_W, TOP_H - 4);
-    s_cursor = ui_label(menu, &sol_mono_12, COL_TEXT, LV_SYMBOL_RIGHT);
-    lv_obj_set_pos(s_cursor, 6, 8);
+    lv_obj_t *menu = panel(scr, 200, 8, 112, 164);
+    s_cursor = text(menu, &lv_font_montserrat_12, 9, 0, INK, LV_SYMBOL_PLAY);
     for (int i = 0; i < ROWS; i++) {
-        s_names[i] = ui_label(menu, &sol_font_14, COL_TEXT, "");
-        lv_obj_set_pos(s_names[i], 20, 6 + i * ROW_H);
+        s_names[i] = text(menu, F_BOLD, 23, ROW_Y - 10 + (int)(i * ROW_PITCH), INK, "");
+        lv_obj_set_width(s_names[i], 80);
+        lv_label_set_long_mode(s_names[i], LV_LABEL_LONG_MODE_CLIP);
+        lv_obj_set_height(s_names[i], lv_font_get_line_height(F_BOLD));
     }
 
     // The dialogue box.
-    lv_obj_t *box = home_tile(root, 8, TOP_H + 6, OS_ROOT_W - 16, OS_ROOT_H - TOP_H - 12);
-    s_ask = ui_label(box, &sol_font_14, COL_TEXT, "What will you do?");
-    lv_obj_set_width(s_ask, OS_ROOT_W - 40);
+    lv_obj_t *box = panel(scr, 8, 178, 304, 54);
+    s_ask = text(box, F_BOLD, 12, 8, INK, "What will you do?");
+    lv_obj_set_width(s_ask, 256);
     lv_label_set_long_mode(s_ask, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_set_height(s_ask, lv_font_get_line_height(&sol_font_14));
-    lv_obj_set_pos(s_ask, 10, 6);
-    s_keys = ui_label(box, &sol_mono_12, COL_DIM, "");
-    lv_obj_set_pos(s_keys, 10, 28);
+    lv_obj_set_height(s_ask, lv_font_get_line_height(F_BOLD));
+    text(box, &lv_font_montserrat_12, 277, 8, RED, LV_SYMBOL_DOWN);
+    s_keys = text(box, F_TEXT, 12, 31, GREY, "");
     s_top = 0;
     render(true);
 }

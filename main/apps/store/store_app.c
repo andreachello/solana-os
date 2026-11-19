@@ -98,6 +98,13 @@ static void req_cancel(int kind)
 
 static lv_obj_t *s_root, *s_cat_l, *s_sort_l, *s_hint, *s_offline, *s_detail_box, *s_action;
 static lv_obj_t *s_pills;            // the Streaming theme's category pills, else NULL
+// The Streaming theme's shelves, in place of the list: the pills, a row of
+// the apps on this badge ("Owned") and a row of the store's apps in the
+// chosen order. NULL in every other theme.
+enum { ZONE_PILLS, ZONE_OWNED, ZONE_STORE };
+#define SHELF_SHOWN     6
+static lv_obj_t *s_shelf, *s_row[2], *s_row_title, *s_row_note;
+static int s_zone = ZONE_PILLS, s_pill, s_pos[2], s_first[2];
 static ui_list_t *s_list;
 static ui_kb_t *s_kb;
 static entry_t *s_entries;
@@ -296,6 +303,149 @@ static void row(int i, ui_row_t *r, void *ctx)
     }
 }
 
+static uint32_t tint_of(const char *id)
+{
+    static const uint32_t tints[] = {0x3A2FC0, 0x0E6B45, 0xB8324E, 0xB8742A, 0x1C8BA8, 0x7A1A60, 0x4C8CFF, 0x6E6A0E};
+    unsigned h = 0;
+    for (const char *p = id; *p; p++) {
+        h = h * 31 + (unsigned char)*p;
+    }
+    return tints[h % (sizeof(tints) / sizeof(tints[0]))];
+}
+
+static int shelf_count(int row)
+{
+    return row == 0 ? (s_installed_n > 0 ? s_installed_n : 0) : s_n;
+}
+
+// One row of posters round its selected one; grey placeholders while the
+// store's row has nothing to show yet.
+static void shelf_row(int row)
+{
+    int n = shelf_count(row);
+    lv_obj_clean(s_row[row]);
+    if (s_pos[row] >= n) {
+        s_pos[row] = n ? n - 1 : 0;
+    }
+    if (s_pos[row] < s_first[row]) {
+        s_first[row] = s_pos[row];
+    } else if (s_pos[row] > s_first[row] + SHELF_SHOWN - 2) {
+        s_first[row] = s_pos[row] - (SHELF_SHOWN - 2);
+    }
+    for (int i = 0; i < SHELF_SHOWN; i++) {
+        int idx = s_first[row] + i, x = 14 + i * (UI_POSTER_W + 7);
+        lv_obj_t *p;
+        if (idx < n && row == 0) {
+            const ver_t *v = &s_installed[idx];
+            p = ui_stream_poster(s_row[row], v->name[0] ? v->name : v->id, LV_SYMBOL_PLAY, NULL, tint_of(v->id), true);
+        } else if (idx < n) {
+            const entry_t *e = &s_entries[idx];
+            p = ui_stream_poster(s_row[row], e->name, e->symbol, NULL, tint_of(e->id), true);
+        } else if (n == 0) {
+            p = lv_obj_create(s_row[row]);
+            lv_obj_remove_style_all(p);
+            lv_obj_set_size(p, UI_POSTER_W, UI_POSTER_H);
+            lv_obj_set_style_radius(p, 3, 0);
+            lv_obj_set_style_bg_color(p, lv_color_hex(0x232327), 0);
+            lv_obj_set_style_bg_opa(p, 255 - i * 38, 0);
+        } else {
+            continue;
+        }
+        lv_obj_set_pos(p, x, 3);
+        ui_stream_ring(p, idx < n && s_zone == ZONE_OWNED + row && idx == s_pos[row]);
+    }
+}
+
+static void shelf_render(void)
+{
+    if (!s_shelf) {
+        return;
+    }
+    lv_obj_set_hidden(s_shelf, s_updates_only);
+    ui_list_show(s_list, s_updates_only);
+    if (s_updates_only) {
+        return;
+    }
+    if ((s_zone == ZONE_OWNED && !shelf_count(0)) || (s_zone == ZONE_STORE && !shelf_count(1))) {
+        s_zone = ZONE_PILLS;
+    }
+    shelf_row(0);
+    shelf_row(1);
+    char t[48];
+    snprintf(t, sizeof(t), "%s%s%.20s", s_sort_names[s_sort], s_q[0] ? ": " : "", s_q);
+    lv_label_set_text(s_row_title, t);
+    lv_label_set_text(s_row_note, s_loading ? "Loading..." : s_err ? s_err : s_n ? "" : "No apps found");
+    lv_label_set_text(s_hint, s_zone == ZONE_PILLS ? LV_SYMBOL_LEFT LV_SYMBOL_RIGHT " category  SELECT sort  " LV_SYMBOL_UP " search"
+                                                  : "SELECT open  " LV_SYMBOL_LEFT LV_SYMBOL_RIGHT " browse  CANCEL exit");
+}
+
+// The shelves' keys. The pills: LEFT/RIGHT pick a category (or Updates),
+// SELECT steps the order, UP searches. A row: LEFT/RIGHT browse, SELECT opens.
+static void fetch_page(bool more);
+static void open_detail(const char *id);
+static void render_list(void);
+
+static bool shelf_key(os_key_t k, bool repeat)
+{
+    int pills = CAT_COUNT + (s_updates_n > 0);
+    if (k == OS_KEY_BACK) {
+        return false;
+    }
+    if (k == OS_KEY_UP || k == OS_KEY_DOWN) {
+        if (s_zone == ZONE_PILLS && k == OS_KEY_UP) {
+            if (!repeat) {
+                s_kb = ui_kb_create(s_root, "Search the App Store", sizeof(s_q) - 1);
+            }
+            return true;
+        }
+        int z = s_zone + (k == OS_KEY_DOWN ? 1 : -1);
+        if (z == ZONE_OWNED && !shelf_count(0)) {
+            z += k == OS_KEY_DOWN ? 1 : -1;
+        }
+        if (z >= ZONE_PILLS && z <= ZONE_STORE && (z != ZONE_STORE || shelf_count(1))) {
+            s_zone = z;
+        }
+        render_list();
+        return true;
+    }
+    if (s_zone == ZONE_PILLS) {
+        if (k == OS_KEY_SELECT && !repeat) {
+            if (s_pill >= CAT_COUNT) {
+                s_updates_only = true;
+                render_list();
+                ui_list_select(s_list, 0);
+            } else {
+                s_sort = (s_sort + 1) % 3;
+                fetch_page(false);
+            }
+        } else if ((k == OS_KEY_LEFT || k == OS_KEY_RIGHT) && !repeat) {
+            s_pill = (s_pill + (k == OS_KEY_RIGHT ? 1 : pills - 1)) % pills;
+            if (s_pill < CAT_COUNT && s_pill != s_cat) {
+                s_cat = s_pill;
+                s_pos[1] = s_first[1] = 0;
+                fetch_page(false);
+            } else {
+                render_list();
+            }
+        }
+        return true;
+    }
+    int row = s_zone - ZONE_OWNED, n = shelf_count(row);
+    if (k == OS_KEY_SELECT && !repeat && s_pos[row] < n) {
+        open_detail(row == 0 ? s_installed[s_pos[row]].id : s_entries[s_pos[row]].id);
+    } else if (k == OS_KEY_LEFT || k == OS_KEY_RIGHT) {
+        int p = s_pos[row] + (k == OS_KEY_RIGHT ? 1 : -1);
+        if (p >= 0 && p < n) {
+            s_pos[row] = p;
+        }
+        if (row == 1 && p >= n - 1 && s_next[0] && !s_loading) {
+            fetch_page(true);       // the end of what is loaded: get the next page
+        }
+        render_list();
+    }
+    return true;
+}
+
 static void render_head(void)
 {
     char t[40];
@@ -308,7 +458,13 @@ static void render_head(void)
         // Streaming: every category as a pill, the current one filled.
         lv_obj_clean(s_pills);
         for (int i = 0; i < CAT_COUNT && !s_updates_only; i++) {
-            ui_stream_pill(s_pills, s_cat_names[i], i == s_cat, 0);
+            lv_obj_t *pill = ui_stream_pill(s_pills, s_cat_names[i], i == s_cat, 0);
+            ui_stream_ring(pill, s_shelf && s_zone == ZONE_PILLS && i == s_pill);
+        }
+        if (s_shelf && s_updates_n > 0 && !s_updates_only) {
+            char t[24];
+            snprintf(t, sizeof(t), "Updates %d", s_updates_n);
+            ui_stream_ring(ui_stream_pill(s_pills, t, false, COL_GREEN), s_zone == ZONE_PILLS && s_pill == CAT_COUNT);
         }
         if (s_updates_only) {
             ui_stream_pill(s_pills, "Updates", true, 0);
@@ -327,6 +483,7 @@ static void render_list(void)
     lv_label_set_text(s_hint, !lv_obj_is_hidden(s_offline) ? "CANCEL exit"
                               : s_updates_only ? "SELECT details   CANCEL back"
                               : "SELECT open   " LV_SYMBOL_LEFT LV_SYMBOL_RIGHT " category   CANCEL exit");
+    shelf_render();
 }
 
 static void list_cb(int status, const char *body, void *ctx);
@@ -830,6 +987,30 @@ static void enter(lv_obj_t *root)
     }
     s_list = ui_list_create(root, HEAD_H, BROWSE_H, row, NULL);
     s_hint = ui_hint(root, "");
+    s_shelf = NULL;
+    if (ui_stream()) {
+        s_shelf = lv_obj_create(root);
+        lv_obj_remove_style_all(s_shelf);
+        lv_obj_set_pos(s_shelf, 0, HEAD_H);
+        lv_obj_set_size(s_shelf, OS_ROOT_W, BROWSE_H);
+        lv_obj_set_scrollable(s_shelf, false);
+        lv_obj_t *l = ui_label(s_shelf, &stream_bold_11, COL_TEXT, "Owned");
+        lv_obj_set_pos(l, 14, 4);
+        s_row_title = ui_label(s_shelf, &stream_bold_11, COL_TEXT, "");
+        lv_obj_set_pos(s_row_title, 14, 92);
+        s_row_note = ui_label(s_shelf, &pearl_font_11, COL_DIM, "");
+        lv_obj_align(s_row_note, LV_ALIGN_TOP_RIGHT, -14, 92);
+        for (int i = 0; i < 2; i++) {
+            s_row[i] = lv_obj_create(s_shelf);
+            lv_obj_remove_style_all(s_row[i]);
+            lv_obj_set_pos(s_row[i], 0, i ? 104 : 16);
+            lv_obj_set_size(s_row[i], OS_ROOT_W, UI_POSTER_H + 6);
+            lv_obj_set_scrollable(s_row[i], false);
+        }
+        s_zone = ZONE_PILLS;
+        s_pill = s_cat;
+        s_pos[0] = s_pos[1] = s_first[0] = s_first[1] = 0;
+    }
     s_offline = ui_offline_create(root, 0, OS_ROOT_H - UI_HINT_H, true);
     xSemaphoreTake(s_mx, portMAX_DELAY);
     s_open = true;
@@ -997,6 +1178,9 @@ static bool key(os_key_t k, bool repeat)
             lv_obj_scroll_by_bounded(body, 0, k == OS_KEY_UP ? 40 : -40, LV_ANIM_ON);
         }
         return true;
+    }
+    if (s_shelf && !s_updates_only) {
+        return shelf_key(k, repeat);
     }
     return list_key(k, repeat);
 }

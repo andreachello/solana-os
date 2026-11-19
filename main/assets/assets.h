@@ -61,3 +61,47 @@ LV_IMAGE_DECLARE(img_poster_salmon_pay);
 LV_IMAGE_DECLARE(img_poster_mind_the_gap);
 LV_IMAGE_DECLARE(img_poster_cube_shift);
 LV_IMAGE_DECLARE(img_poster_final_answer);
+
+// The design-matched themes' own faces (all SIL OFL 1.1: LICENSE-*.txt) and the
+// boards' line icons (24x24 A8: recolour with image_recolor), from the canvas.
+LV_FONT_DECLARE(apple_font_10);
+LV_FONT_DECLARE(apple_font_12);
+LV_FONT_DECLARE(apple_font_14);
+LV_FONT_DECLARE(apple_num_26);
+LV_FONT_DECLARE(apple_num_48);
+LV_FONT_DECLARE(blocks_font_13);
+LV_FONT_DECLARE(blocks_font_15);
+LV_FONT_DECLARE(blocks_mono_9);
+LV_FONT_DECLARE(blocks_num_41);
+LV_FONT_DECLARE(blocks_text_12);
+LV_FONT_DECLARE(paper_font_16);
+LV_FONT_DECLARE(paper_italic_17);
+LV_FONT_DECLARE(paper_mono_11);
+LV_FONT_DECLARE(paper_mono_9);
+LV_FONT_DECLARE(paper_num_46);
+LV_FONT_DECLARE(rpg_bold_10);
+LV_FONT_DECLARE(rpg_font_9);
+LV_FONT_DECLARE(rpg_num_26);
+LV_FONT_DECLARE(term_mono_11);
+LV_FONT_DECLARE(term_mono_9);
+LV_FONT_DECLARE(term_mono_bold_11);
+LV_IMAGE_DECLARE(img_line_app);
+LV_IMAGE_DECLARE(img_line_apps);
+LV_IMAGE_DECLARE(img_line_badge);
+LV_IMAGE_DECLARE(img_line_debug);
+LV_IMAGE_DECLARE(img_line_espnow);
+LV_IMAGE_DECLARE(img_line_guide);
+LV_IMAGE_DECLARE(img_line_quests);
+LV_IMAGE_DECLARE(img_line_settings);
+LV_IMAGE_DECLARE(img_line_store);
+LV_IMAGE_DECLARE(img_line_trade);
+LV_IMAGE_DECLARE(img_line_wifi);
+LV_IMAGE_DECLARE(img_line_xdex);
+LV_IMAGE_DECLARE(img_list_orb);
+LV_IMAGE_DECLARE(img_rpg_gem);
+
+// Lumen's home cards (core/home/home_lumen.c): each card's glass, glow and
+// artwork as one image rendered from the design (tools/img2lvgl.py).
+LV_IMAGE_DECLARE(img_lumen_hero);
+LV_IMAGE_DECLARE(img_lumen_wifi);
+LV_IMAGE_DECLARE(img_lumen_quest);

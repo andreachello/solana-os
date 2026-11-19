@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solana OS local emulator</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0b0b10; color: #e8e6f0; font: 14px/1.4 system-ui, sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: auto 1fr; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .badge { background: #15151d; border: 1px solid #2a2935; border-radius: 16px; padding: 14px; width: max-content; max-width: 100%; box-sizing: border-box; }
+  canvas { display: block; width: 640px; max-width: 100%; aspect-ratio: 4 / 3; image-rendering: pixelated; background: #000; border-radius: 6px; }
+  .leds { display: flex; gap: 8px; margin: 10px 0 0; }
+  .leds i { width: 14px; height: 14px; border-radius: 50%; background: #111; border: 1px solid #2a2935; }
+  .pad { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  button { font: inherit; color: inherit; background: #1c1b26; border: 1px solid #2a2935; border-radius: 8px; padding: 8px 12px; min-width: 44px; min-height: 40px; cursor: pointer; }
+  button:hover { background: #26253a; }
+  button:active { background: #3a3850; }
+  .side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  input[type=text] { flex: 1; min-width: 0; font: 13px ui-monospace, monospace; color: inherit; background: #101016; border: 1px solid #2a2935; border-radius: 8px; padding: 8px 10px; }
+  pre { margin: 0; height: 360px; overflow: auto; background: #101016; border: 1px solid #2a2935; border-radius: 8px; padding: 8px 10px; font: 12px/1.45 ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; }
+  small { color: #8e8c9e; }
+  kbd { font: 12px ui-monospace, monospace; background: #1c1b26; border: 1px solid #2a2935; border-radius: 4px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="badge">
+    <canvas id="lcd" width="320" height="240" tabindex="0" aria-label="Badge screen"></canvas>
+    <div class="leds" id="leds" aria-hidden="true"></div>
+    <div class="pad" id="pad">
+      <button data-key="2" aria-label="Left">&larr;</button>
+      <button data-key="0" aria-label="Up">&uarr;</button>
+      <button data-key="1" aria-label="Down">&darr;</button>
+      <button data-key="3" aria-label="Right">&rarr;</button>
+      <button data-key="4">SELECT</button>
+      <button data-key="5">CANCEL</button>
+      <button data-key="6">BOOT</button>
+    </div>
+    <p><small>Keys: arrows, <kbd>Enter</kbd> select, <kbd>Esc</kbd> or <kbd>Backspace</kbd> cancel, <kbd>H</kbd> home (BOOT).</small></p>
+  </div>
+  <div class="side">
+    <div class="row" id="quick">
+      <button data-cmd="theme 3">Black pearl</button>
+      <button data-cmd="theme 2">Pearl</button>
+      <button data-cmd="theme 0">Classic Dark</button>
+      <button data-cmd="theme">List themes</button>
+      <button data-cmd="open home">Home</button>
+      <button data-cmd="wifi connect &quot;Emulator Guest&quot;">Wi-Fi on</button>
+      <button data-cmd="cloud">Cloud</button>
+      <button id="shot">Save PNG</button>
+      <button id="reboot">Reboot</button>
+    </div>
+    <form class="row" id="con">
+      <input type="text" id="line" placeholder="console command, e.g. help, theme 3, open badge" autocomplete="off" aria-label="Console command">
+      <button>Run</button>
+    </form>
+    <pre id="log" aria-live="off"></pre>
+    <small id="where"></small>
+  </div>
+</main>
+<script src="./solana-os.js"></script>
+<script>
+// Minimal page for a local build of the emulator (the site's own page lives
+// in the private repo). Page API: emulator/README.md "Page API".
+const q = new URLSearchParams(location.search);
+// The badge server the emulated badge says hello to once Wi-Fi is on.
+// ?server=<origin> overrides; ?server=none keeps the badge offline.
+const DEFAULT_SERVER = "https://badge-api.solana.com";
+const server = q.get("server") === "none" ? "http://127.0.0.1:9" : (q.get("server") || DEFAULT_SERVER);
+document.getElementById("where").textContent = "Server: " + (q.get("server") === "none" ? "none (offline)" : server) +
+    "  ·  ?server=<origin> or ?server=none to change, ?badge=2 for a second badge, ?theme=3 to boot into a theme";
+
+const logEl = document.getElementById("log");
+function log(s) {
+    logEl.textContent += s + "\n";
+    if (logEl.textContent.length > 60000) logEl.textContent = logEl.textContent.slice(-40000);
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+const lcd = document.getElementById("lcd");
+const ctx = lcd.getContext("2d");
+const image = ctx.createImageData(320, 240);
+const ledEls = [];
+let M = null, lines = 0, lastFrame = -1, lastLeds = -1, resetReason = "poweron";
+
+// ?claimed=@Name[&lamps=1250][&tile=1..3&x=..&tg=..&link=..] with ?badge=<tag>:
+// seed that emulated badge's NVS as a claimed one, to look at the screens a
+// claimed badge shows without a server. It overwrites that tag's saved state,
+// so it insists on a ?badge= tag and leaves the default badge alone.
+function seedClaimed() {
+    const tag = (q.get("badge") || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 8);
+    if (!q.get("claimed") || !tag) return;
+    const str = (v) => ({ t: 1, h: Array.from(new TextEncoder().encode(v + "\0"), (b) => b.toString(16).padStart(2, "0")).join("") });
+    const i32 = (v) => ({ t: 7, h: [0, 8, 16, 24].map((s) => ((v >> s) & 255).toString(16).padStart(2, "0")).join("") });
+    const nvs = {
+        cloud: { server: str(server), id: str("EMU001"), secret: str("local-preview"), user: str("preview1"),
+                 owner: str(q.get("claimed")), claimed: i32(1), lamps: i32(Number(q.get("lamps") || 1250)), level: i32(3) },
+        badge: { split: i32(Number(q.get("split") || 0)), ticket: str(q.get("ticket") || ""), tname: str(q.get("tname") || ""), tile: i32(Number(q.get("tile") || 0)), x: str(q.get("x") || ""), tg: str(q.get("tg") || ""), link: str(q.get("link") || "") },
+    };
+    localStorage.setItem("solana-os-emu:" + tag + ":nvs", JSON.stringify(nvs));
+}
+
+async function boot() {
+    lines = 0;
+    lastFrame = lastLeds = -1;
+    const mod = await SolanaOS({
+        print: log,
+        printErr: log,
+        locateFile: (f) => "./" + f,
+        onAbort: (e) => log("ABORT: " + e),
+        server,
+        serverAliases: [],
+        resetReason,
+        onRestart: () => { resetReason = "sw"; reboot(); },
+    });
+    M = mod;
+    // ?theme=3 and ?run=open settings;key down : console lines sent once the OS is up.
+    const startup = (q.get("theme") ? ["theme " + q.get("theme")] : []).concat((q.get("run") || "").split(";"));
+    const todo = startup.map((s) => s.trim()).filter(Boolean);
+    // ?demo=1 puts the design's eight sample apps on the emulated card;
+    // ?app=<id>&files=main.lua,app.json copies ./apps/<id>/<file> onto it and runs it.
+    const card = [];
+    if (q.get("demo")) {
+        const demo = [["cube-shift", "Cube Shift", "1.0.0", "3A2FC0", "game"], ["degen-maze", "Degen Maze", "0.3.0", "0E3A1E", "game"],
+            ["doom", "DOOM", "1.0.2", "4A4A52", "game"], ["final-answer", "Final Answer", "1.2.0", "4C8CFF", "game"],
+            ["mind-the-gap", "Mind the Gap", "0.4.0", "FFD400", "game"], ["minex", "MineX Breakpoint", "1.2.0", "B88A4A", "tools"],
+            ["salmon-pay", "Salmon Pay", "0.3.0", "FF7A66", "tools"], ["sol-bible", "Sol Bible", "1.3.0", "B8742A", "tools"]];
+        for (const [id, name, version, accent, category] of demo) {
+            card.push([id, "app.json", JSON.stringify({ id, name, version, author: "@demo", summary: "Sample app for the emulator", icon: "play", accent, category })]);
+            card.push([id, "main.lua", "ui.clear() ui.text(10, 10, \"" + name + "\")\n"]);
+        }
+    }
+    if (q.get("app")) {
+        const id = q.get("app");
+        for (const f of (q.get("files") || "main.lua,app.json").split(",")) {
+            const r = await fetch("./apps/" + id + "/" + f);
+            if (r.ok) card.push([id, f, new Uint8Array(await r.arrayBuffer())]); else log("app file missing: " + f);
+        }
+        todo.push("lua run " + id);
+    }
+    const loadCard = () => {
+        for (const [id, f, data] of card) {
+            const dir = "/sdcard/hh/apps/" + id + (f.includes("/") ? "/" + f.slice(0, f.lastIndexOf("/")) : "");
+            mod.FS.mkdirTree(dir);
+            mod.FS.writeFile("/sdcard/hh/apps/" + id + "/" + f, data);
+        }
+        if (card.length) { log("card: wrote " + card.length + " files"); todo.unshift("open home"); }
+        card.length = 0;
+    };
+    // The OS registers its commands in os_start(): wait for the home screen
+    // (the splash and the LED sweep come first), then send one line at a time.
+    const up = () => mod === M && mod.UTF8ToString(mod._emu_current_app()) === "launcher";
+    let ready = false;
+    const next = () => {
+        if (mod !== M || (!todo.length && !card.length)) return;
+        if (!ready && !up()) return void setTimeout(next, 200);
+        ready = true;        // only the first line waits for the home screen
+        if (card.length) { loadCard(); }
+        if (!todo.length) return;
+        command(todo.shift());
+        setTimeout(next, 700);
+    };
+    if (todo.length || card.length) setTimeout(next, 200);
+}
+
+function reboot() {
+    if (M) { try { M._emu_halt(); } catch (e) {} }
+    M = null;
+    setTimeout(boot, 50);
+}
+
+function command(line) {
+    if (!M) return;
+    log("> " + line);
+    M.ccall("emu_console", null, ["string"], [line], { async: true });
+}
+
+function frame() {
+    requestAnimationFrame(frame);
+    if (!M || !M._emu_frame) return;
+    const f = M._emu_frame();
+    if (f !== lastFrame) {
+        lastFrame = f;
+        const p = M._emu_framebuffer();
+        image.data.set(M.HEAPU8.subarray(p, p + 320 * 240 * 4));
+        ctx.putImageData(image, 0, 0);
+        lcd.style.filter = "brightness(" + (0.35 + 0.65 * M._emu_backlight() / 100) + ")";
+    }
+    const v = M._emu_leds_version();
+    if (v !== lastLeds) {
+        lastLeds = v;
+        const p = M._emu_leds() >>> 2;
+        ledEls.forEach((el, i) => {
+            const c = M.HEAPU32[p + i] >>> 0;
+            // Stored as 0x00RRGGBB at the badge's low LED power; brighten for the page.
+            const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, k = 255 / 24;
+            el.style.background = r | g | b ? `rgb(${Math.min(255, r * k)},${Math.min(255, g * k)},${Math.min(255, b * k)})` : "#111";
+        });
+    }
+}
+
+function press(key, down) {
+    if (!M) return;
+    const bit = M._emu_button_line(key);
+    lines = down ? (lines | bit) : (lines & ~bit);
+    M._emu_buttons_set(lines);
+}
+
+const KEYS = { ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3, Enter: 4, Escape: 5, Backspace: 5, h: 6, H: 6 };
+addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT" || !(e.key in KEYS)) return;
+    e.preventDefault();
+    if (!e.repeat) press(KEYS[e.key], true);
+});
+addEventListener("keyup", (e) => {
+    if (e.target.tagName === "INPUT" || !(e.key in KEYS)) return;
+    e.preventDefault();
+    press(KEYS[e.key], false);
+});
+for (const b of document.querySelectorAll("#pad button")) {
+    const k = Number(b.dataset.key);
+    b.addEventListener("pointerdown", () => press(k, true));
+    for (const ev of ["pointerup", "pointerleave", "pointercancel"]) b.addEventListener(ev, () => press(k, false));
+}
+for (const b of document.querySelectorAll("#quick button[data-cmd]")) {
+    b.addEventListener("click", () => command(b.dataset.cmd));
+}
+document.getElementById("reboot").addEventListener("click", () => { resetReason = "poweron"; reboot(); });
+document.getElementById("shot").addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.download = "solana-os.png";
+    a.href = lcd.toDataURL("image/png");
+    a.click();
+});
+document.getElementById("con").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const el = document.getElementById("line");
+    if (el.value.trim()) command(el.value.trim());
+    el.value = "";
+});
+for (let i = 0; i < 8; i++) ledEls.push(document.getElementById("leds").appendChild(document.createElement("i")));
+
+// For scripts and devtools: emulator.command("theme 3"), emulator.png().
+window.emulator = { command, press, reboot, png: () => lcd.toDataURL("image/png"), get module() { return M; } };
+seedClaimed();
+boot().then(() => requestAnimationFrame(frame), (e) => log("boot failed: " + e));
+</script>
+</body>
+</html>

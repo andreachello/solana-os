@@ -11,13 +11,15 @@
 #define ROWS        2
 #define PER_PAGE    (COLS * ROWS)
 #define DOCK        4
-#define ICON        44
-#define CELL_W      74
-#define CELL_H      62
-#define X0          ((OS_ROOT_W - COLS * CELL_W) / 2)
-#define Y0          6
+#define ICON        46
+#define CELL_W      69
+#define CELL_H      64
+#define X0          22
+#define Y0          4
 #define DOCK_H      56
-#define DOCK_Y      (OS_ROOT_H - DOCK_H - 6)
+#define DOCK_Y      154
+#define DOCK_X      30
+#define DOCK_W      260
 
 typedef struct {
     lv_obj_t *box, *plate, *icon, *name;
@@ -47,16 +49,13 @@ static void cell_set(cell_t *c, const os_app_t *app)
     if (c->icon) {
         lv_obj_delete(c->icon);
     }
-    // The app's accent as the icon's plate, its symbol in the ground colour.
-    if (app->symbol) {
-        lv_obj_set_style_bg_color(c->plate, ui_col(app->accent), 0);
-        c->icon = ui_label(c->plate, &lv_font_montserrat_20, COL_BG, app->symbol);
-    } else {
-        lv_obj_set_style_bg_color(c->plate, ui_col(COL_BG), 0);
-        c->icon = lv_image_create(c->plate);
-        lv_image_set_src(c->icon, app->icon);
-        lv_image_set_scale(c->icon, 200);
-    }
+    // The design's gradient as the icon's plate, its line icon in white.
+    uint32_t top, bottom;
+    home_gradient(app, &top, &bottom);
+    lv_obj_set_style_bg_color(c->plate, lv_color_hex(top), 0);
+    lv_obj_set_style_bg_grad_color(c->plate, lv_color_hex(bottom), 0);
+    lv_obj_set_style_bg_grad_dir(c->plate, LV_GRAD_DIR_VER, 0);
+    c->icon = home_line_icon(c->plate, app, 0xFFFFFF, c->name ? 24 : 22);
     lv_obj_center(c->icon);
     if (c->name) {
         lv_label_set_text(c->name, app->name);
@@ -65,8 +64,11 @@ static void cell_set(cell_t *c, const os_app_t *app)
 
 static void caption(void)
 {
+    // The design has no caption: the dock's icons stay unnamed but for the
+    // selected one, named in the status bar.
     const os_app_t *app = home_app(home_sel());
-    if (!app) {
+    os_status_title(app && home_sel() >= home_count() - docked() ? app->name : "Solana OS", 0);
+    if (!app || !s_caption) {
         return;
     }
     home_info_t in;
@@ -112,47 +114,51 @@ static void cell_make(cell_t *c, lv_obj_t *parent, int x, int y, bool named)
     c->box = lv_obj_create(parent);
     lv_obj_remove_style_all(c->box);
     lv_obj_set_pos(c->box, x, y);
-    lv_obj_set_size(c->box, CELL_W, named ? CELL_H : ICON + 8);
+    int icon = named ? ICON : 42;
+    lv_obj_set_size(c->box, named ? CELL_W : icon + 8, named ? CELL_H : icon + 8);
     lv_obj_set_scrollable(c->box, false);
     c->plate = lv_obj_create(c->box);
     lv_obj_remove_style_all(c->plate);
-    lv_obj_set_size(c->plate, ICON, ICON);
+    lv_obj_set_size(c->plate, icon, icon);
     lv_obj_align(c->plate, LV_ALIGN_TOP_MID, 0, 4);
-    lv_obj_set_style_radius(c->plate, ui_radius(), 0);
+    lv_obj_set_style_radius(c->plate, named ? 13 : 12, 0);
     lv_obj_set_style_bg_opa(c->plate, LV_OPA_COVER, 0);
     lv_obj_set_style_outline_color(c->plate, ui_focus_bg(), 0);
     lv_obj_set_style_outline_pad(c->plate, 2, 0);
     lv_obj_set_scrollable(c->plate, false);
     if (named) {
-        c->name = ui_label(c->box, &sol_mono_12, COL_TEXT, "");
+        c->name = ui_label(c->box, &apple_font_10, COL_TEXT, "");
         lv_obj_set_width(c->name, CELL_W - 2);
         lv_obj_set_style_text_align(c->name, LV_TEXT_ALIGN_CENTER, 0);
         lv_label_set_long_mode(c->name, LV_LABEL_LONG_MODE_DOTS);
-        lv_obj_set_height(c->name, lv_font_get_line_height(&sol_mono_12));
-        lv_obj_align(c->name, LV_ALIGN_BOTTOM_MID, 0, 0);
+        lv_obj_set_height(c->name, lv_font_get_line_height(&apple_font_10));
+        lv_obj_align(c->name, LV_ALIGN_TOP_MID, 0, 54);
     }
 }
 
 static void enter(lv_obj_t *root)
 {
     for (int i = 0; i < PER_PAGE; i++) {
-        cell_make(&s_cells[i], root, X0 + (i % COLS) * CELL_W, Y0 + (i / COLS) * (CELL_H + 4), true);
+        cell_make(&s_cells[i], root, X0 + (i % COLS) * CELL_W, Y0 + (i / COLS) * 71, true);
     }
-    s_caption = ui_label(root, &sol_mono_12, COL_DIM, "");
-    lv_obj_set_width(s_caption, OS_ROOT_W - 110);
-    lv_obj_set_style_text_align(s_caption, LV_TEXT_ALIGN_CENTER, 0);
-    lv_label_set_long_mode(s_caption, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_set_height(s_caption, lv_font_get_line_height(&sol_mono_12));
-    lv_obj_align(s_caption, LV_ALIGN_TOP_MID, 0, DOCK_Y - 17);
-    s_dots = home_dots(root, DOCK_Y - 13);
-    lv_obj_set_width(s_dots, 44);
-    lv_obj_align(s_dots, LV_ALIGN_TOP_RIGHT, -8, DOCK_Y - 13);
+    s_caption = NULL;
+    s_dots = home_dots(root, DOCK_Y - 9);
 
-    lv_obj_t *dock = home_tile(root, 7, DOCK_Y, OS_ROOT_W - 14, DOCK_H);
+    // The dock: a frosted bar, four unnamed icons.
+    lv_obj_t *dock = lv_obj_create(root);
+    lv_obj_remove_style_all(dock);
+    lv_obj_set_pos(dock, DOCK_X, DOCK_Y);
+    lv_obj_set_size(dock, DOCK_W, DOCK_H);
+    lv_obj_set_style_radius(dock, 19, 0);
+    lv_obj_set_style_bg_color(dock, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(dock, 51, 0);
+    lv_obj_set_style_border_width(dock, 1, 0);
+    lv_obj_set_style_border_color(dock, lv_color_white(), 0);
+    lv_obj_set_style_border_opa(dock, 56, 0);
+    lv_obj_set_scrollable(dock, false);
     lv_obj_set_hidden(dock, !docked());
-    int step = (OS_ROOT_W - 14) / DOCK;
     for (int i = 0; i < DOCK; i++) {
-        cell_make(&s_cells[PER_PAGE + i], dock, i * step + (step - CELL_W) / 2, 1, false);
+        cell_make(&s_cells[PER_PAGE + i], dock, 13 + (int)(i * 60.4f), 2, false);
     }
     s_page = -1;
     render(true);

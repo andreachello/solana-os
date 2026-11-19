@@ -103,67 +103,17 @@ static void collect(void)
     s_built = -1;
 }
 
-static const lv_image_dsc_t *poster_art(const char *name)
-{
-    static const struct {
-        const char *name;
-        const lv_image_dsc_t *img;
-    } art[] = {
-        {"degen maze", &img_poster_degen_maze}, {"sol bible", &img_poster_sol_bible},
-        {"salmon pay", &img_poster_salmon_pay}, {"mind the gap", &img_poster_mind_the_gap},
-        {"cube shift", &img_poster_cube_shift}, {"final answer", &img_poster_final_answer},
-    };
-    for (int i = 0; i < (int)(sizeof(art) / sizeof(art[0])); i++) {
-        if (!strcasecmp(name, art[i].name)) {
-            return art[i].img;
-        }
-    }
-    return NULL;
-}
-
-// A poster: the app's art, or its icon over its name on a wash of its colour.
+// A poster for the row (core/ui_stream.c draws it).
 static lv_obj_t *poster(lv_obj_t *parent, const item_t *it, int x)
 {
-    const char *name = it->lua ? s_pkgs[it->idx].name : home_app(it->idx)->name;
-    const lv_image_dsc_t *img = it->lua ? poster_art(name) : NULL;
-    lv_obj_t *p = lv_obj_create(parent);
-    lv_obj_remove_style_all(p);
-    lv_obj_set_pos(p, x, 3);
-    lv_obj_set_size(p, POSTER_W, POSTER_H);
-    lv_obj_set_style_radius(p, 3, 0);
-    lv_obj_set_scrollable(p, false);
-    if (img) {
-        lv_obj_t *i = lv_image_create(p);
-        lv_image_set_src(i, img);
-        return p;
-    }
-    uint32_t accent = it->lua ? s_pkgs[it->idx].accent : ui_theme_hex(ui_theme(), home_app(it->idx)->accent);
-    const char *symbol = it->lua ? s_pkgs[it->idx].symbol : home_app(it->idx)->symbol;
-    lv_obj_set_style_bg_opa(p, LV_OPA_COVER, 0);
-    lv_obj_set_style_bg_color(p, lv_color_mix(lv_color_hex(accent), lv_color_hex(0x0B0B0D), 110), 0);
-    lv_obj_set_style_bg_grad_color(p, lv_color_hex(0x121216), 0);
-    lv_obj_set_style_bg_grad_dir(p, LV_GRAD_DIR_VER, 0);
-    lv_obj_t *icon;
-    if (symbol) {
-        icon = lv_label_create(p);
-        lv_obj_set_style_text_font(icon, &lv_font_montserrat_20, 0);
-        lv_obj_set_style_text_color(icon, lv_color_white(), 0);
-        lv_label_set_text(icon, symbol);
+    lv_obj_t *p;
+    if (it->lua) {
+        p = ui_stream_poster(parent, s_pkgs[it->idx].name, s_pkgs[it->idx].symbol, NULL, s_pkgs[it->idx].accent, true);
     } else {
-        icon = lv_image_create(p);
-        lv_image_set_src(icon, home_app(it->idx)->icon);
+        const os_app_t *app = home_app(it->idx);
+        p = ui_stream_poster(parent, app->name, app->symbol, app->icon, ui_theme_hex(ui_theme(), app->accent), false);
     }
-    lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 9);
-    char caps[24];
-    lv_obj_t *l = lv_label_create(p);
-    lv_obj_set_style_text_font(l, &stream_disp_14, 0);
-    lv_obj_set_style_text_color(l, lv_color_white(), 0);
-    lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_line_space(l, -2, 0);
-    lv_obj_set_width(l, POSTER_W - 4);
-    lv_obj_set_style_max_height(l, 28, 0);
-    lv_label_set_text(l, ui_stream_caps(caps, sizeof(caps), name));
-    lv_obj_align(l, LV_ALIGN_BOTTOM_MID, 0, -3);
+    lv_obj_set_pos(p, x, 3);
     return p;
 }
 

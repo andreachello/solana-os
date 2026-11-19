@@ -25,6 +25,8 @@ typedef struct {
     bool (*select)(void);
 } home_layout_t;
 
+extern const home_layout_t home_term, home_blocks, home_controls, home_epaper;
+extern const home_layout_t home_lumen;
 extern const home_layout_t home_grid, home_list, home_bento, home_pearl, home_rpg, home_icons, home_dial, home_stream;
 
 // The apps shown, in registry order, and the selected one.
@@ -50,6 +52,12 @@ void home_info(const os_app_t *app, home_info_t *out);
 // An app's launcher icon as a child of parent: its symbol in colour `color`
 // (a COL_*; 0 = the app's accent), or its image.
 lv_obj_t *home_icon(lv_obj_t *parent, const os_app_t *app, uint32_t color);
+// The design's line icon for an app, px pixels square (24 is its own size), in
+// a colour: a hex 0xRRGGBB, not a COL_*. About keeps the Solana mark.
+lv_obj_t *home_line_icon(lv_obj_t *parent, const os_app_t *app, uint32_t hex, int px);
+void home_line_icon_color(lv_obj_t *icon, uint32_t hex);
+// The design's gradient for an app's icon tile, top to bottom.
+void home_gradient(const os_app_t *app, uint32_t *top, uint32_t *bottom);
 // Recolour an icon or a label for a focused (filled) tile, or back.
 void home_icon_focus(lv_obj_t *icon, const os_app_t *app, bool on, uint32_t color);
 void home_text_focus(lv_obj_t *label, bool on, uint32_t color);
@@ -59,6 +67,12 @@ bool home_fills(void);
 lv_obj_t *home_tile(lv_obj_t *parent, int x, int y, int w, int h);
 // The tile as the selected one, or not, in the theme's way.
 void home_tile_focus(lv_obj_t *tile, bool on);
+// The layout's own header over the status bar (see launcher.c): draw on what
+// this returns, in screen coordinates; it goes when `owner` is deleted.
+lv_obj_t *home_header(lv_obj_t *owner);
+// The whole screen for a layout with no status bar: an opaque sheet over the
+// bar and the app root, in screen coordinates; it goes when `owner` is deleted.
+lv_obj_t *home_fullscreen(lv_obj_t *owner);
 // Page dots, centred at y; redraw with home_dots_set().
 lv_obj_t *home_dots(lv_obj_t *parent, int y);
 void home_dots_set(lv_obj_t *dots, int pages, int page);

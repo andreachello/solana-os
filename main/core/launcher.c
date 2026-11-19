@@ -25,6 +25,21 @@ static bool listed(const os_app_t *app)
     return !app->visible || app->visible();
 }
 
+// Themes drawn from a design that puts My Badge first list the apps in the
+// design's order; the classic grid, the pearl homes (their own order) and
+// Streaming keep the registry's.
+static bool design_order(void)
+{
+    switch (ui_theme()->home) {
+    case UI_HOME_GRID:
+    case UI_HOME_PEARL:
+    case UI_HOME_STREAM:
+        return false;
+    default:
+        return true;
+    }
+}
+
 // Rebuilds the list; true if it changed. The selection stays on its app.
 static bool collect(void)
 {
@@ -35,6 +50,27 @@ static bool collect(void)
         if (listed(os_apps[i])) {
             next[n++] = os_apps[i];
         }
+    }
+    if (design_order()) {
+        // The designs' order: these lead, the rest follow in registry order.
+        static const char *const lead[] = {"badge", "wifi", "quests", "xdex", "guide", "trade", "store", "apps",
+                                            "settings", "espnow", "debug"};
+        const os_app_t *sorted[32];
+        int m = 0;
+        for (int l = 0; l < (int)(sizeof(lead) / sizeof(lead[0])); l++) {
+            for (int i = 0; i < n; i++) {
+                if (next[i] && !strcmp(next[i]->id, lead[l])) {
+                    sorted[m++] = next[i];
+                    next[i] = NULL;
+                }
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            if (next[i]) {
+                sorted[m++] = next[i];
+            }
+        }
+        memcpy(next, sorted, n * sizeof(next[0]));
     }
     if (n == s_count && !memcmp(next, s_list, n * sizeof(next[0]))) {
         return false;
@@ -166,6 +202,55 @@ lv_obj_t *home_icon(lv_obj_t *parent, const os_app_t *app, uint32_t color)
     return img;
 }
 
+lv_obj_t *home_line_icon(lv_obj_t *parent, const os_app_t *app, uint32_t hex, int px)
+{
+    static const struct { const char *id; const lv_image_dsc_t *img; } icons[] = {
+        {"badge", &img_line_badge}, {"wifi", &img_line_wifi}, {"quests", &img_line_quests}, {"xdex", &img_line_xdex},
+        {"guide", &img_line_guide}, {"trade", &img_line_trade}, {"store", &img_line_store}, {"apps", &img_line_apps},
+        {"settings", &img_line_settings}, {"espnow", &img_line_espnow}, {"debug", &img_line_debug},
+    };
+    lv_obj_t *img = lv_image_create(parent);
+    if (!strcmp(app->id, "about")) {
+        lv_image_set_src(img, &img_logomark_16);
+        lv_image_set_scale(img, 256 * px / 18);
+        return img;
+    }
+    const lv_image_dsc_t *src = &img_line_app;
+    for (int i = 0; i < (int)(sizeof(icons) / sizeof(icons[0])); i++) {
+        if (!strcmp(app->id, icons[i].id)) {
+            src = icons[i].img;
+        }
+    }
+    lv_image_set_src(img, src);
+    lv_image_set_scale(img, 256 * px / 24);
+    lv_obj_set_style_image_recolor(img, lv_color_hex(hex), 0);
+    lv_obj_set_style_image_recolor_opa(img, LV_OPA_COVER, 0);
+    return img;
+}
+
+void home_gradient(const os_app_t *app, uint32_t *top, uint32_t *bottom)
+{
+    static const struct { const char *id; uint32_t top, bottom; } c[] = {
+        {"badge", 0x9C8CFF, 0x5B43E0}, {"wifi", 0x5AB0FF, 0x1668E3}, {"quests", 0xFF7CAB, 0xD62F6B},
+        {"xdex", 0x454857, 0x14151B}, {"guide", 0xFFBC5C, 0xF07A12}, {"trade", 0x5BE6AA, 0x109C5E},
+        {"store", 0x6BD2FF, 0x0A84D6}, {"apps", 0xCE8CFF, 0x7A3FD0}, {"settings", 0xA6ABBB, 0x5B6072},
+        {"espnow", 0x7C95FF, 0x2E4FD6}, {"debug", 0xFF8576, 0xD43A2C}, {"about", 0x2A2D3A, 0x0E0F15},
+    };
+    *top = 0x9AA0B4;
+    *bottom = 0x5A6078;
+    for (int i = 0; i < (int)(sizeof(c) / sizeof(c[0])); i++) {
+        if (!strcmp(app->id, c[i].id)) {
+            *top = c[i].top;
+            *bottom = c[i].bottom;
+        }
+    }
+}
+
+void home_line_icon_color(lv_obj_t *icon, uint32_t hex)
+{
+    lv_obj_set_style_image_recolor(icon, lv_color_hex(hex), 0);
+}
+
 void home_icon_focus(lv_obj_t *icon, const os_app_t *app, bool on, uint32_t color)
 {
     if (app->symbol) {
@@ -238,6 +323,66 @@ void home_dots_set(lv_obj_t *dots, int pages, int page)
     }
 }
 
+// A home layout's own header in place of the status bar's: a cover over the
+// bar, there until `owner` (an object of the layout) is deleted. The layout
+// draws its header on it, in screen coordinates.
+static lv_obj_t *s_header;
+
+static void header_gone(lv_event_t *e)
+{
+    s_header = NULL;
+}
+
+static void header_owner_gone(lv_event_t *e)
+{
+    if (s_header) {
+        lv_obj_delete(s_header);
+    }
+}
+
+lv_obj_t *home_header(lv_obj_t *owner)
+{
+    s_header = lv_obj_create(os_status_bar());
+    lv_obj_remove_style_all(s_header);
+    lv_obj_set_size(s_header, OS_ROOT_W, OS_STATUS_H);
+    lv_obj_set_style_bg_opa(s_header, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(s_header, ui_col(COL_BG), 0);
+    lv_obj_set_scrollable(s_header, false);
+    lv_obj_add_event_cb(s_header, header_gone, LV_EVENT_DELETE, NULL);
+    lv_obj_add_event_cb(owner, header_owner_gone, LV_EVENT_DELETE, NULL);
+    return s_header;
+}
+
+// A layout that takes the whole screen, status bar included: an opaque sheet
+// over everything, there until `owner` (an object of the layout in the app
+// root) is deleted. Its children are in screen coordinates.
+static lv_obj_t *s_full;
+
+static void full_gone(lv_event_t *e)
+{
+    s_full = NULL;
+}
+
+static void full_owner_gone(lv_event_t *e)
+{
+    if (s_full) {
+        lv_obj_delete(s_full);
+    }
+}
+
+lv_obj_t *home_fullscreen(lv_obj_t *owner)
+{
+    s_full = lv_obj_create(lv_obj_get_parent(os_status_bar()));
+    lv_obj_remove_style_all(s_full);
+    lv_obj_set_size(s_full, OS_ROOT_W, OS_STATUS_H + OS_ROOT_H);
+    lv_obj_set_style_bg_opa(s_full, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(s_full, ui_col(COL_BG), 0);
+    lv_obj_set_scrollable(s_full, false);
+    lv_obj_add_event_cb(s_full, full_gone, LV_EVENT_DELETE, NULL);
+    lv_obj_add_event_cb(owner, full_owner_gone, LV_EVENT_DELETE, NULL);
+    return s_full;
+}
+
 static const home_layout_t *layout(void)
 {
     switch (ui_theme()->home) {
@@ -246,8 +391,13 @@ static const home_layout_t *layout(void)
     case UI_HOME_PEARL: return &home_pearl;
     case UI_HOME_RPG:   return &home_rpg;
     case UI_HOME_STREAM: return &home_stream;
+    case UI_HOME_LUMEN: return &home_lumen;
     case UI_HOME_ICONS: return &home_icons;
     case UI_HOME_DIAL:  return &home_dial;
+    case UI_HOME_TERM:  return &home_term;
+    case UI_HOME_BLOCKS: return &home_blocks;
+    case UI_HOME_CONTROLS: return &home_controls;
+    case UI_HOME_EPAPER: return &home_epaper;
     default:            return &home_grid;
     }
 }
@@ -261,6 +411,12 @@ static void enter(lv_obj_t *root)
     if (!os_wifi_saved_ssid(s_saved, sizeof(s_saved))) {
         s_saved[0] = 0;
     }
+    // A theme seen for the first time opens the way its design does: on My Badge.
+    static int theme = -1;
+    if (theme != ui_theme()->id && design_order() && home_find("badge") >= 0) {
+        s_sel = home_find("badge");
+    }
+    theme = ui_theme()->id;
     s_ticks = 0;
     s_lay = layout();
     s_lay->enter(root);

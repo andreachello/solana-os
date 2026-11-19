@@ -94,6 +94,13 @@ void os_theme_apply(void);
 // The status bar, for a home layout that draws in it (the Streaming theme's
 // tabs): delete what you add when your layout goes.
 lv_obj_t *os_status_bar(void);
+// Hide the bar's own contents while a home layout draws its own header in it
+// (a design with no system bar). Call it in the layout's enter(); the OS shows
+// them again when any app is entered.
+void os_status_bare(bool on);
+// UI_BAR_SLIM: the title's text and colour (a COL_*, 0 = text) until the next
+// app is entered, e.g. the focused item's name.
+void os_status_title(const char *text, uint32_t color);
 // Switch to the theme with this id and save the choice (any task; it happens
 // after the current callback). False if no theme has that id.
 bool os_theme_set(int id);

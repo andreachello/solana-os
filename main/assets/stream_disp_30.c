@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 30 px
  * Bpp: 4
- * Opts: --no-compress --no-prefilter --bpp 4 --size 30 --font node_modules/@fontsource/bebas-neue/files/bebas-neue-latin-400-normal.woff --range 0x20-0x5F,0x7C --format lvgl --lv-include lvgl.h --force-fast-kern-format -o /Users/andreachello/Coding/solana-os/main/assets/stream_disp_30.c
+ * Opts: --no-compress --no-prefilter --bpp 4 --size 30 --font node_modules/@fontsource/bebas-neue/files/bebas-neue-latin-400-normal.woff --range 0x20-0x5F,0x7C --format lvgl --lv-include lvgl.h --force-fast-kern-format -o stream_disp_30.c
  ******************************************************************************/
 
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE

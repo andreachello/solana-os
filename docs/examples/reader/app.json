@@ -1,0 +1,11 @@
+{
+  "id": "books",
+  "name": "Books",
+  "version": "1.0.0",
+  "author": "@you",
+  "summary": "A bookshelf and e-reader: classics and philosophy, bookmarks, text sizes, a daily reading goal.",
+  "icon": "list",
+  "accent": "F3EAD7",
+  "category": "tools",
+  "permissions": []
+}
