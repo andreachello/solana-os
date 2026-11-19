@@ -55,12 +55,6 @@ LV_IMAGE_DECLARE(img_stream_hero);
 LV_IMAGE_DECLARE(img_stream_radar);
 LV_IMAGE_DECLARE(img_stream_cards);
 LV_IMAGE_DECLARE(img_stream_orb);
-LV_IMAGE_DECLARE(img_poster_degen_maze);
-LV_IMAGE_DECLARE(img_poster_sol_bible);
-LV_IMAGE_DECLARE(img_poster_salmon_pay);
-LV_IMAGE_DECLARE(img_poster_mind_the_gap);
-LV_IMAGE_DECLARE(img_poster_cube_shift);
-LV_IMAGE_DECLARE(img_poster_final_answer);
 
 // The design-matched themes' own faces (all SIL OFL 1.1: LICENSE-*.txt) and the
 // boards' line icons (24x24 A8: recolour with image_recolor), from the canvas.

@@ -32,9 +32,9 @@ lv_obj_t *ui_stream_button(lv_obj_t *parent, const char *symbol, const char *tex
 // A pill: filled white when `on`, outlined otherwise; `dot` (a COL_*, 0 =
 // none) puts a status dot before the text.
 lv_obj_t *ui_stream_pill(lv_obj_t *parent, const char *text, bool on, uint32_t dot);
-// A 51x64 poster for an app: for a store app (`art`) whose name is one of
-// the six the design drew, that artwork; else `symbol` (or `icon`, an image,
-// when it has no symbol) over the name on a wash of `accent` (0xRRGGBB).
+// A 51x64 poster for an app: `symbol` (or `icon`, an image, when it has no
+// symbol) over the name on a wash of `accent` (0xRRGGBB). `art` is unused (no
+// artwork is bundled).
 #define UI_POSTER_W     51
 #define UI_POSTER_H     64
 lv_obj_t *ui_stream_poster(lv_obj_t *parent, const char *name, const char *symbol, const void *icon, uint32_t accent, bool art);

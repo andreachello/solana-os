@@ -67,11 +67,13 @@ def main():
         im = face(w, h) if default else crop(src, w, h, "--circle" in sys.argv)
         mask = Image.new("L", (w * 4, h * 4), 0)
         ImageDraw.Draw(mask).rounded_rectangle((0, 0, w * 4 - 1, h * 4 - 1), radius * 4, fill=255)
-        im.putalpha(mask.resize((w, h), Image.LANCZOS))
+        # Opaque (a third smaller than with an alpha channel): the rounded
+        # corners are blended into the Streaming theme's background colour.
+        im = Image.composite(im, Image.new("RGB", (w, h), (0x0B, 0x0B, 0x0D)), mask.resize((w, h), Image.LANCZOS))
         with tempfile.TemporaryDirectory() as tmp:
             png = os.path.join(tmp, name + ".png")
             im.save(png)
-            subprocess.check_call([sys.executable, os.path.join(ROOT, "tools", "img2lvgl.py"), png, name,
+            subprocess.check_call([sys.executable, os.path.join(ROOT, "tools", "img2lvgl565.py"), png, name,
                                    os.path.join(ROOT, "main", "assets", name + ".c")])
 
 

@@ -929,7 +929,7 @@ void os_brightness_apply(void)
 static void screen_style(lv_obj_t *scr)
 {
     lv_obj_set_style_bg_color(scr, ui_col(COL_BG), 0);
-    lv_obj_set_style_bg_image_src(scr, ui_theme()->wallpaper, 0);
+    lv_obj_set_style_bg_image_src(scr, ui_wallpaper(), 0);
 }
 
 static void theme_posted(void *arg)

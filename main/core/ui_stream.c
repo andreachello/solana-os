@@ -234,27 +234,10 @@ lv_obj_t *ui_stream_empty_art(lv_obj_t *parent)
     return img;
 }
 
-static const lv_image_dsc_t *poster_art(const char *name)
-{
-    static const struct {
-        const char *name;
-        const lv_image_dsc_t *img;
-    } art[] = {
-        {"degen maze", &img_poster_degen_maze}, {"sol bible", &img_poster_sol_bible},
-        {"salmon pay", &img_poster_salmon_pay}, {"mind the gap", &img_poster_mind_the_gap},
-        {"cube shift", &img_poster_cube_shift}, {"final answer", &img_poster_final_answer},
-    };
-    for (int i = 0; i < (int)(sizeof(art) / sizeof(art[0])); i++) {
-        if (!strcasecmp(name, art[i].name)) {
-            return art[i].img;
-        }
-    }
-    return NULL;
-}
-
 lv_obj_t *ui_stream_poster(lv_obj_t *parent, const char *name, const char *symbol, const void *icon, uint32_t accent, bool art)
 {
-    const lv_image_dsc_t *img = art ? poster_art(name) : NULL;
+    (void)art;      // no artwork is bundled: every poster is drawn
+    const lv_image_dsc_t *img = NULL;
     lv_obj_t *p = lv_obj_create(parent);
     lv_obj_remove_style_all(p);
     lv_obj_set_size(p, UI_POSTER_W, UI_POSTER_H);

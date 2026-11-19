@@ -329,7 +329,7 @@ static void enter(lv_obj_t *root)
     lv_obj_t *owner = lv_obj_create(root);
     lv_obj_remove_style_all(owner);
     lv_obj_t *scr = home_fullscreen(owner);
-    lv_obj_set_style_bg_image_src(scr, ui_theme()->wallpaper, 0);
+    lv_obj_set_style_bg_image_src(scr, ui_wallpaper(), 0);
     s_box = lv_obj_create(scr);
     lv_obj_remove_style_all(s_box);
     lv_obj_set_size(s_box, OS_ROOT_W, 226);

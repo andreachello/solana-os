@@ -57,7 +57,13 @@ static void preview(const ui_theme_t *t)
 {
     lv_obj_clean(s_pv);
     lv_obj_set_style_bg_color(s_pv, lv_color_hex(t->pal[UI_P_BG]), 0);
-    lv_obj_set_style_bg_image_src(s_pv, t->wallpaper, 0);
+    if (t->wallpaper) {
+        // Stored at half size: scaled here, where it is small and still.
+        lv_obj_t *wall = lv_image_create(s_pv);
+        lv_image_set_src(wall, t->wallpaper);
+        lv_image_set_scale(wall, 512);
+        lv_obj_center(wall);
+    }
     int w = PV_W - 2;
 
     lv_obj_t *name = text(s_pv, t, true, t->pal[UI_P_TEXT], t->name);

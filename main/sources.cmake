@@ -138,8 +138,6 @@ set(SOLANA_OS_SRCS
     assets/stream_caps_8.c assets/stream_bold_11.c assets/img_stream_hero.c
     assets/img_stream_radar.c assets/img_stream_cards.c assets/img_stream_orb.c assets/img_me_split.c assets/img_me_card.c
     assets/img_lumen_hero.c assets/img_lumen_wifi.c assets/img_lumen_quest.c
-    assets/img_poster_degen_maze.c assets/img_poster_sol_bible.c assets/img_poster_salmon_pay.c
-    assets/img_poster_mind_the_gap.c assets/img_poster_cube_shift.c assets/img_poster_final_answer.c
 )
 
 set(SOLANA_OS_DEVICE_SRCS

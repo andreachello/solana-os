@@ -91,7 +91,7 @@ typedef struct {
     uint8_t bar;                // ui_bar_t
     uint8_t home;               // ui_home_t
     uint8_t home_opt;           // layout variant, the layout's own meaning
-    const lv_image_dsc_t *wallpaper;    // full screen, behind everything, or NULL
+    const lv_image_dsc_t *wallpaper;    // behind everything, or NULL: stored at half size (160x120 RGB888), draw ui_wallpaper()
 } ui_theme_t;
 
 int ui_theme_count(void);
@@ -102,3 +102,9 @@ void ui_theme_reload(void);                     // after OS_SET_THEME changed
 
 // A COL_* value (theme.h) in theme t; other values pass through.
 uint32_t ui_theme_hex(const ui_theme_t *t, uint32_t col);
+
+// The current theme's wallpaper at full size (320x240 RGB565), or NULL if it
+// has none: its half-size image scaled up once into RAM, kept until a theme
+// with another wallpaper (or none) asks. LVGL locked. A screen in some other
+// theme's look (the Themes app's preview) draws t->wallpaper itself, scaled.
+const lv_image_dsc_t *ui_wallpaper(void);

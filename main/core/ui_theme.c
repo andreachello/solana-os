@@ -1,9 +1,11 @@
 // The theme table. See ui_theme.h.
 
 #include <stddef.h>
+#include <stdlib.h>
 #include "ui_theme.h"
 #include "theme.h"
 #include "os_settings.h"
+#include "os_mem.h"
 #include "assets/assets.h"
 
 // Brand accents as they are (on dark grounds), the deeper shades the Light
@@ -189,4 +191,73 @@ uint32_t ui_theme_hex(const ui_theme_t *t, uint32_t col)
         }
     }
     return col;
+}
+
+// ---------------------------------------------------------------------------
+// Wallpaper: half size in flash, full size in RAM
+
+const lv_image_dsc_t *ui_wallpaper(void)
+{
+    enum { W = 320, H = 240 };
+    static lv_image_dsc_t s_dsc;
+    static uint16_t *s_px;
+    static const lv_image_dsc_t *s_from;
+    const lv_image_dsc_t *src = ui_theme()->wallpaper;
+    if (src == s_from) {
+        return s_px ? &s_dsc : NULL;
+    }
+    // LVGL's image cache is off (LV_CACHE_DEF_SIZE 0): nothing holds the old pixels.
+    if (!src || src->header.cf != LV_COLOR_FORMAT_RGB888) {
+        free(s_px);
+        s_px = NULL;
+        s_from = src;
+        return NULL;
+    }
+    if (!s_px) {
+        s_px = heap_caps_malloc(W * H * 2, OS_MEM_PSRAM);
+        if (!s_px) {
+            s_px = malloc(W * H * 2);
+        }
+        if (!s_px) {
+            return NULL;    // the plain background; asked for again next time
+        }
+    }
+    // Bilinear, each output pixel a quarter or three quarters of the way
+    // between two source pixels, then an ordered dither down to 16 bits so
+    // the soft gradients don't band.
+    static const uint8_t bayer[4][4] = {{0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};
+    const int sw = src->header.w, sh = src->header.h, stride = src->header.stride;
+    const uint8_t *in = src->data;
+    for (int y = 0; y < H; y++) {
+        int fy = (2 * y * sh - H + sh) * 2 / H; // position in quarter rows, centre to centre
+        int y0 = fy < 0 ? 0 : fy >> 2, wy = fy < 0 ? 0 : fy & 3;
+        int y1 = y0 + 1 < sh ? y0 + 1 : sh - 1;
+        y0 = y0 < sh ? y0 : sh - 1;
+        for (int x = 0; x < W; x++) {
+            int fx = (2 * x * sw - W + sw) * 2 / W;
+            int x0 = fx < 0 ? 0 : fx >> 2, wx = fx < 0 ? 0 : fx & 3;
+            int x1 = x0 + 1 < sw ? x0 + 1 : sw - 1;
+            x0 = x0 < sw ? x0 : sw - 1;
+            const uint8_t *a = in + y0 * stride + x0 * 3, *b = in + y0 * stride + x1 * 3;
+            const uint8_t *c = in + y1 * stride + x0 * 3, *d = in + y1 * stride + x1 * 3;
+            int v[3];
+            for (int k = 0; k < 3; k++) {
+                int top = a[k] * (4 - wx) + b[k] * wx, bottom = c[k] * (4 - wx) + d[k] * wx;
+                v[k] = (top * (4 - wy) + bottom * wy + 8) >> 4;
+            }
+            int t = bayer[y & 3][x & 3];
+            int bl = v[0] + (t >> 1) - 4, g = v[1] + (t >> 2) - 2, r = v[2] + (t >> 1) - 4;
+            bl = bl < 0 ? 0 : bl > 255 ? 255 : bl;
+            g = g < 0 ? 0 : g > 255 ? 255 : g;
+            r = r < 0 ? 0 : r > 255 ? 255 : r;
+            s_px[y * W + x] = (uint16_t)((r >> 3) << 11 | (g >> 2) << 5 | (bl >> 3));
+        }
+    }
+    s_dsc = (lv_image_dsc_t){
+        .header = {.magic = LV_IMAGE_HEADER_MAGIC, .cf = LV_COLOR_FORMAT_RGB565, .w = W, .h = H, .stride = W * 2},
+        .data_size = W * H * 2,
+        .data = (const uint8_t *)s_px,
+    };
+    s_from = src;
+    return &s_dsc;
 }
